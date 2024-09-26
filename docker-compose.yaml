@@ -1,9 +1,10 @@
+services:
   githelper:
     build: .
 #    depends_on:
 #      - local-ai-head
     ports:
-      - 8086:8086
+      - 8086:8080
 #    environment:
 #      - AI_BASEURL=http://local-ai-head:8080
 #      - AI_ENDPOINT=http://local-ai-head:8080

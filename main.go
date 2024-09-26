@@ -16,23 +16,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var Client *github.Client
+
 // Define your API endpoint for handling webhook requests.
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	var repoOwner *string
 	var repoName *string
 
-	// creating github client from private key
-	_ = godotenv.Load()
-	_id := os.Getenv("APP_ID")
-	//wh_secret := os.Getenv("WEBHOOK_SECRET")
-	pk_path := os.Getenv("PRIVATE_KEY_PATH")
-	app_id, err := strconv.Atoi(_id)
-	if err != nil {
-		// ... handle error
-		panic(err)
-	}
-	client := createClient(pk_path, app_id)
+	client := Client
 
 	// Extract the issue event details from the webhook payload.
 	// ... (Logic to handle webhook payload and extract issue content)
@@ -127,7 +119,7 @@ func createClient(key_path string, app_id int) *github.Client {
 	if err != nil {
 		log.Fatalf("failed to create app transport: %v\n", err)
 	}
-	itr.BaseURL = gitHost
+	//itr.BaseURL = gitHost
 
 	//create git client with app transport
 	client, err := github.NewClient(
@@ -182,7 +174,22 @@ func callThirdService(content string) (string, error) {
 
 func main() {
 
+	fmt.Println("main process started")
+
+	// creating github client from private key
+	_ = godotenv.Load()
+	_id := os.Getenv("APP_ID")
+	//wh_secret := os.Getenv("WEBHOOK_SECRET")
+	pk_path := os.Getenv("PRIVATE_KEY_PATH")
+	app_id, err := strconv.Atoi(_id)
+	if err != nil {
+		// ... handle error
+		panic(err)
+	}
+	Client = createClient(pk_path, app_id)
+
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
+	//log.Fatal(http.ListenAndServe(":8086", nil))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

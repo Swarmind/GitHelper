@@ -19,6 +19,6 @@ RUN go build -o main .
 #RUN apk add ca-certificates
 
 
-EXPOSE 8086
+EXPOSE 8080
 
 CMD [ "./main" ]
