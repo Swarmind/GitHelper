@@ -108,7 +108,7 @@ func respond(w http.ResponseWriter, r *http.Request, client *github.Client, owne
 }
 
 func createClient(key_path string, app_id int) *github.Client {
-	const gitHost = "https://git.api.com"
+	//const gitHost = "https://git.api.com"
 
 	privatePem, err := os.ReadFile(key_path)
 	if err != nil {
@@ -122,15 +122,15 @@ func createClient(key_path string, app_id int) *github.Client {
 	//itr.BaseURL = gitHost
 
 	//create git client with app transport
-	client, err := github.NewClient(
+	client := github.NewClient(
 		&http.Client{
 			Transport: itr,
 			Timeout:   time.Second * 30,
 		},
-	).WithEnterpriseURLs(gitHost, gitHost)
+	)
 	//)
 
-	if err != nil {
+	if client == nil {
 		log.Fatalf("failed to create git client for app: %v\n", err)
 	}
 
@@ -154,12 +154,14 @@ func createClient(key_path string, app_id int) *github.Client {
 		log.Fatalf("failed to create installation token: %v\n", err)
 	}
 
-	apiClient, err := github.NewClient(nil).WithAuthToken(
+	apiClient := github.NewClient(nil).WithAuthToken(
 		token.GetToken(),
-	).WithEnterpriseURLs(gitHost, gitHost)
-	if err != nil {
+	)
+	if apiClient == nil {
 		log.Fatalf("failed to create new git client with token: %v\n", err)
 	}
+
+	log.Println("gh client: ", apiClient)
 
 	return apiClient
 }
@@ -191,5 +193,5 @@ func main() {
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
 	//log.Fatal(http.ListenAndServe(":8086", nil))
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8086", nil))
 }
