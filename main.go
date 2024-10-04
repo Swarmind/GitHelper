@@ -20,69 +20,57 @@ var Client *github.Client
 
 // Define your API endpoint for handling webhook requests.
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
-
-	var repoOwner *string
-	var repoName *string
-
+	defer r.Body.Close()
 	client := Client
 
-	// Extract the issue event details from the webhook payload.
-	// ... (Logic to handle webhook payload and extract issue content)
-	// read the request body
+	// Extract webhook event type from the header
+	eventType := github.WebHookType(r)
 	requestBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Fprintln(w, "Error reading request body: ", err)
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
 		return
 	}
+	// Parse event based on eventType
+	switch eventType {
+	case "installation_repositories":
+		event := new(github.InstallationRepositoriesEvent)
+		err := json.Unmarshal(requestBody, event)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error unmarshalling installation_repositories event: %v", err), http.StatusBadRequest)
+			return
+		}
+		if len(event.RepositoriesAdded) > 0 {
+			repoOwner := event.Sender.GetLogin()
+			repoName := *event.RepositoriesAdded[0].Name
+			fmt.Printf("App installed for repository: %s/%s\n", repoOwner, repoName)
+		}
 
-	// unmarshal the JSON payload
-	var payload interface{}
-	err = json.Unmarshal(requestBody, &payload)
-	if err != nil {
-		fmt.Fprintln(w, "Error unmarshaling JSON payload: ", err)
-		return
-	}
+	case "issues":
+		event := new(github.IssuesEvent)
+		err := json.Unmarshal(requestBody, event)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error unmarshalling issues event: %v", err), http.StatusBadRequest)
+			return
+		}
 
-	switch event := payload.(type) {
-	case github.InstallationRepositoriesEvent:
-		// Handle app installation events:
-		repoOwner = event.Sender.Login
-		repoName = event.RepositoriesAdded[0].Name
-		fmt.Println("App installed for repository:", repoOwner, repoName)
-		/*
-				case github.Installation:
-			        // Handle app installation events:
-			        repoOwner := event.Repository.Owner
-			        repoName := event.Repository.Name
-			        fmt.Println("App installed for repository:", repoOwner, repoName)
-		*/
-	case github.Issue:
-		// Handle new issue events:
-		issueTitle := event.Title
-		issueBody := event.Body
-		issueID := event.ID
-		fmt.Println("New issue with title:", issueTitle, "and body:", issueBody)
+		if event.GetAction() == "opened" {
+			repoOwner := event.GetRepo().GetOwner().GetLogin()
+			repoName := event.GetRepo().GetName()
+			issueID := event.GetIssue().GetNumber()
+			issueTitle := event.GetIssue().GetTitle()
+			issueBody := event.GetIssue().GetBody()
 
-		// ... (Rest of your logic to extract issue content and call 3rd service)
-		response := "hardcoded response"
+			fmt.Printf("New issue opened: %s/%s Issue: %d Title: %s\n", repoOwner, repoName, issueID, issueTitle)
+			fmt.Println("Issue body is: ", issueBody)
 
-		respond(w, r, client, *repoOwner, *repoName, *issueID, response)
+			// Respond to the issue
+			response := "hardcoded response"
+			respond(w, r, client, repoOwner, repoName, int64(issueID), response)
+		}
 
 	default:
-		fmt.Fprintln(w, "Unknown event type received")
+		http.Error(w, "Unknown event type received", http.StatusBadRequest)
 	}
-
-	//response := "hardcoded response"
-
-	/*
-	   // Call your 3rd service with the extracted issue content.
-	   response, err := callThirdService(issueContent)
-	   if err != nil {
-	       fmt.Fprintln(w, "Error calling 3rd service: ", err)
-	       return
-	   }
-	*/
-
 }
 
 func respond(w http.ResponseWriter, r *http.Request, client *github.Client, owner string, repo string, id int64, response string) {
@@ -98,7 +86,6 @@ func respond(w http.ResponseWriter, r *http.Request, client *github.Client, owne
 		// Configure the comment with the issue's ID and other necessary details.
 		Body: &replyMessage,
 	})
-
 	if err != nil {
 		fmt.Fprintln(w, "Error creating comment on issue: ", err)
 	} else {
@@ -161,18 +148,18 @@ func createClient(key_path string, app_id int) *github.Client {
 		log.Fatalf("failed to create new git client with token: %v\n", err)
 	}
 
-	log.Println("gh client: ", apiClient)
+	//log.Println("gh client: ", apiClient)
 
 	return apiClient
 }
 
-// Example implementation of your 3rd service call.
+/* // Example implementation of your 3rd service call.
 func callThirdService(content string) (string, error) {
 	// Implement the logic to call your 3rd service here.
 	// ... (Replace this with your actual API call)
 	// For demonstration, return a fixed response.
 	return "From 3rd service!", nil
-}
+} */
 
 func main() {
 
@@ -193,5 +180,5 @@ func main() {
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
 	//log.Fatal(http.ListenAndServe(":8086", nil))
-	log.Fatal(http.ListenAndServe(":8086", nil))
+	log.Fatal(http.ListenAndServe(":8186", nil))
 }
