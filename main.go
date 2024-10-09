@@ -11,12 +11,20 @@ import (
 	"strconv"
 	"time"
 
+	embd "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v65/github"
 	"github.com/joho/godotenv"
+	"github.com/tmc/langchaingo/chains"
+	"github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/vectorstores"
 )
 
 var Client *github.Client
+var AI string
+var API_TOKEN string
+var DB string
+var NS string
 
 // Define your API endpoint for handling webhook requests.
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -64,13 +72,31 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Issue body is: ", issueBody)
 
 			// Respond to the issue
-			response := "hardcoded response"
+			response, err := generateResponse(issueBody)
+			if err != nil {
+				log.Println("Can't generate response")
+				log.Println(err)
+				response = "Can't generate response bleep-bloop"
+			}
 			respond(w, r, client, repoOwner, repoName, int64(issueID), response)
 		}
 
 	default:
 		http.Error(w, "Unknown event type received", http.StatusBadRequest)
 	}
+}
+
+func generateResponse(prompt string) (string, error) {
+	collection, err := getCollection(AI,API_TOKEN,DB,NS)	// getting all docs from (whole collection) for namespace (repo_name)
+	if err != nil {
+		log.Println(err)
+	}
+
+	response, err := rag(prompt,AI,API_TOKEN,1,collection)
+	if err != nil {
+		return "", err
+	}
+	return response, nil
 }
 
 func respond(w http.ResponseWriter, r *http.Request, client *github.Client, owner string, repo string, id int64, response string) {
@@ -177,8 +203,77 @@ func main() {
 	}
 	Client = createClient(pk_path, app_id)
 
+
+	//Test getting vectorstore from .env
+	// In production name should be replaced by event value
+	ai := os.Getenv("AI_ENDPOINT")
+	apit := os.Getenv("API_TOKEN")
+	db_link := os.Getenv("DB_URL")
+	namesp := os.Getenv("REPO_NAME")
+
+	AI = ai
+	API_TOKEN = apit
+	DB = db_link
+	NS = namesp
+
+
+
+
+
+
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
 	//log.Fatal(http.ListenAndServe(":8086", nil))
 	log.Fatal(http.ListenAndServe(":8186", nil))
+}
+
+
+
+
+func getCollection(ai_url string,api_token string,db_link string,namespace string) (vectorstores.VectorStore,error){
+	store, err := embd.GetVectorStoreWithOptions(ai_url,api_token,db_link,namespace)  // ai, api, db, namespace
+	if err != nil {
+		return nil, err
+	}
+	return store,nil
+}
+
+
+
+// Retrival-Augmented Generation
+func rag(question string,ai_url string,api_token string, numOfResults int,store vectorstores.VectorStore) (result string,err error) {
+		//base_url := os.Getenv("AI_BASEURL")
+		base_url := ai_url
+
+		// Create an embeddings client using the. 
+		llm, err := openai.New(
+			//openai.WithBaseURL("http://localhost:8080/v1/"),
+			openai.WithBaseURL(base_url),
+			openai.WithAPIVersion("v1"),
+			openai.WithToken(api_token),
+			openai.WithModel("tiger-gemma-9b-v1-i1"),
+			openai.WithEmbeddingModel("text-embedding-ada-002"),
+		)
+		if err != nil {
+			return "",err
+		}
+	
+		result, err = chains.Run(
+			context.Background(),
+			chains.NewRetrievalQAFromLLM(
+				llm,
+				vectorstores.ToRetriever(store, numOfResults),
+			),
+			question,
+			chains.WithMaxTokens(8192),
+		)
+		if err != nil {
+			return "",err
+		}
+	
+		fmt.Println("====final answer====\n", result)
+	
+		return result,nil
+
+
 }
