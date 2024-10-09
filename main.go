@@ -72,7 +72,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Issue body is: ", issueBody)
 
 			// Respond to the issue
-			response, err := generateResponse(issueBody)
+			response, err := generateResponse(issueBody,repoName)
 			if err != nil {
 				log.Println("Can't generate response")
 				log.Println(err)
@@ -86,8 +86,8 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateResponse(prompt string) (string, error) {
-	collection, err := getCollection(AI,API_TOKEN,DB,NS)	// getting all docs from (whole collection) for namespace (repo_name)
+func generateResponse(prompt string, namespace string) (string, error) {
+	collection, err := getCollection(AI,API_TOKEN,DB, namespace)	// getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Println(err)
 	}
