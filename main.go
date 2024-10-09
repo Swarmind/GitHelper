@@ -209,12 +209,12 @@ func main() {
 	ai := os.Getenv("AI_ENDPOINT")
 	apit := os.Getenv("API_TOKEN")
 	db_link := os.Getenv("DB_URL")
-	namesp := os.Getenv("REPO_NAME")
+	//namesp := os.Getenv("REPO_NAME")
 
 	AI = ai
 	API_TOKEN = apit
 	DB = db_link
-	NS = namesp
+	//NS = namesp
 
 
 
