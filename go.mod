@@ -6,6 +6,7 @@ require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.11.0
 	github.com/google/go-github/v65 v65.0.0
 	github.com/joho/godotenv v1.5.1
+	github.com/tmc/langchaingo v0.1.11-0.20240523170143-078e88b77de4
 )
 
 require (
@@ -46,7 +47,6 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/tmc/langchaingo v0.1.11-0.20240523170143-078e88b77de4 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
