@@ -72,7 +72,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Issue body is: ", issueBody)
 
 			// Respond to the issue
-			response, err := generateResponse(issueBody,repoName)
+			response, err := generateResponse(issueBody, repoName)
 			if err != nil {
 				log.Println("Can't generate response")
 				log.Println(err)
@@ -87,12 +87,12 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func generateResponse(prompt string, namespace string) (string, error) {
-	collection, err := getCollection(AI,API_TOKEN,DB, namespace)	// getting all docs from (whole collection) for namespace (repo_name)
+	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Println(err)
 	}
 
-	response, err := rag(prompt,AI,API_TOKEN,1,collection)
+	response, err := rag(prompt, AI, API_TOKEN, 1, collection)
 	if err != nil {
 		return "", err
 	}
@@ -108,10 +108,13 @@ func respond(w http.ResponseWriter, r *http.Request, client *github.Client, owne
 	// Create a new comment on the issue using the GitHub API.
 
 	//client := github.NewClient(nil)
-	_, _, err := client.Issues.CreateComment(ctx, owner, repo, int(id), &github.IssueComment{
+	a, b, err := client.Issues.CreateComment(ctx, owner, repo, int(id), &github.IssueComment{
 		// Configure the comment with the issue's ID and other necessary details.
 		Body: &replyMessage,
 	})
+	
+	fmt.Println("Var #1: ", a)
+	fmt.Println("Var #2: ", b)
 	if err != nil {
 		fmt.Fprintln(w, "Error creating comment on issue: ", err)
 	} else {
@@ -203,7 +206,6 @@ func main() {
 	}
 	Client = createClient(pk_path, app_id)
 
-
 	//Test getting vectorstore from .env
 	// In production name should be replaced by event value
 	ai := os.Getenv("AI_ENDPOINT")
@@ -216,64 +218,53 @@ func main() {
 	DB = db_link
 	//NS = namesp
 
-
-
-
-
-
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
 	//log.Fatal(http.ListenAndServe(":8086", nil))
 	log.Fatal(http.ListenAndServe(":8186", nil))
 }
 
-
-
-
-func getCollection(ai_url string,api_token string,db_link string,namespace string) (vectorstores.VectorStore,error){
-	store, err := embd.GetVectorStoreWithOptions(ai_url,api_token,db_link,namespace)  // ai, api, db, namespace
+func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
+	store, err := embd.GetVectorStoreWithOptions(ai_url, api_token, db_link, namespace) // ai, api, db, namespace
 	if err != nil {
 		return nil, err
 	}
-	return store,nil
+	return store, nil
 }
 
-
-
 // Retrival-Augmented Generation
-func rag(question string,ai_url string,api_token string, numOfResults int,store vectorstores.VectorStore) (result string,err error) {
-		//base_url := os.Getenv("AI_BASEURL")
-		base_url := ai_url
+func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
+	//base_url := os.Getenv("AI_BASEURL")
+	base_url := ai_url
 
-		// Create an embeddings client using the. 
-		llm, err := openai.New(
-			//openai.WithBaseURL("http://localhost:8080/v1/"),
-			openai.WithBaseURL(base_url),
-			openai.WithAPIVersion("v1"),
-			openai.WithToken(api_token),
-			openai.WithModel("tiger-gemma-9b-v1-i1"),
-			openai.WithEmbeddingModel("text-embedding-ada-002"),
-		)
-		if err != nil {
-			return "",err
-		}
-	
-		result, err = chains.Run(
-			context.Background(),
-			chains.NewRetrievalQAFromLLM(
-				llm,
-				vectorstores.ToRetriever(store, numOfResults),
-			),
-			question,
-			chains.WithMaxTokens(8192),
-		)
-		if err != nil {
-			return "",err
-		}
-	
-		fmt.Println("====final answer====\n", result)
-	
-		return result,nil
+	// Create an embeddings client using the.
+	llm, err := openai.New(
+		//openai.WithBaseURL("http://localhost:8080/v1/"),
+		openai.WithBaseURL(base_url),
+		openai.WithAPIVersion("v1"),
+		openai.WithToken(api_token),
+		openai.WithModel("tiger-gemma-9b-v1-i1"),
+		openai.WithEmbeddingModel("text-embedding-ada-002"),
+	)
+	if err != nil {
+		return "", err
+	}
 
+	result, err = chains.Run(
+		context.Background(),
+		chains.NewRetrievalQAFromLLM(
+			llm,
+			vectorstores.ToRetriever(store, numOfResults),
+		),
+		question,
+		chains.WithMaxTokens(8192),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("====final answer====\n", result)
+
+	return result, nil
 
 }
