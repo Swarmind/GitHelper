@@ -97,13 +97,11 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("it's done")
 	return response, nil
 }
 
 func respond(client *github.Client, owner string, repo string, id int64, response string) {
 	ctx := context.Background()
-	log.Printf("Respond() called!")
 	// Craft a reply message from the response from the 3rd service.
 	replyMessage := fmt.Sprintf("Here's the response from our 3rd service:\n%s", response)
 
@@ -193,7 +191,6 @@ func callThirdService(content string) (string, error) {
 } */
 
 func main() {
-fmt.Println("tesr")
 	fmt.Println("main process started")
 
 	// creating github client from private key
@@ -237,7 +234,6 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 // Retrival-Augmented Generation
 func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	//base_url := os.Getenv("AI_BASEURL")
-	fmt.Println("rag launched")
 	base_url := ai_url
 
 	// Create an embeddings client using the.
