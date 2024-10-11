@@ -13,12 +13,12 @@ import (
 	"time"
 
 	embd "github.com/JackBekket/hellper/lib/embeddings"
+	embeddings "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v65/github"
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/llms/openai"
-	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
@@ -252,8 +252,8 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 		return "", err
 	}
 
-	//🤕🤕🤕 
-	searchResults, err := SemanticSearch(question, numOfResults, store)
+	//🤕🤕🤕
+	searchResults, err := embeddings.SemanticSearch(question, numOfResults, store)
 	if err != nil {
 		return "", err
 	}
@@ -266,7 +266,6 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 	contexts := contextBuilder.String()
 
 	fullPrompt := fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, question)
-
 
 	result, err = chains.Run(
 		context.Background(),
@@ -284,25 +283,4 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 	fmt.Println("====final answer====\n", result)
 
 	return result, nil
-}
-
-func SemanticSearch(searchQuery string, maxResults int, store vectorstores.VectorStore, options ...vectorstores.Option) (searchResults []schema.Document, err error) {
-
-	searchResults, err = store.SimilaritySearch(context.Background(), searchQuery, maxResults, options...)
-
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println("============== similarity search results ==============")
-
-	for _, doc := range searchResults {
-		fmt.Println("similarity search info -", doc.PageContent)
-		fmt.Println("similarity search score -", doc.Score)
-		fmt.Println("============================")
-
-	}
-
-	return searchResults, nil
-
 }
