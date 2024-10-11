@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	embd "github.com/JackBekket/hellper/lib/embeddings"
@@ -17,6 +18,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
@@ -92,6 +94,9 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	if err != nil {
 		log.Println(err)
 	}
+	/* opts := vectorstores.WithFilters(map[string]string{
+		"type": "doc",
+	}) */
 
 	response, err := rag(prompt, AI, API_TOKEN, 1, collection)
 	if err != nil {
@@ -231,14 +236,12 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 	return store, nil
 }
 
-// Retrival-Augmented Generation
 func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	//base_url := os.Getenv("AI_BASEURL")
 	base_url := ai_url
 
-	// Create an embeddings client using the.
+	// Create an embeddings client using the specified API and embedding model
 	llm, err := openai.New(
-		//openai.WithBaseURL("http://localhost:8080/v1/"),
 		openai.WithBaseURL(base_url),
 		openai.WithAPIVersion("v1"),
 		openai.WithToken(api_token),
@@ -249,13 +252,29 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 		return "", err
 	}
 
+	//🤕🤕🤕 
+	searchResults, err := SemanticSearch(question, numOfResults, store)
+	if err != nil {
+		return "", err
+	}
+
+	contextBuilder := strings.Builder{}
+	for _, doc := range searchResults {
+		contextBuilder.WriteString(doc.PageContent)
+		contextBuilder.WriteString("\n")
+	}
+	contexts := contextBuilder.String()
+
+	fullPrompt := fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, question)
+
+
 	result, err = chains.Run(
 		context.Background(),
 		chains.NewRetrievalQAFromLLM(
 			llm,
 			vectorstores.ToRetriever(store, numOfResults),
 		),
-		question,
+		fullPrompt,
 		chains.WithMaxTokens(8192),
 	)
 	if err != nil {
@@ -265,5 +284,25 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 	fmt.Println("====final answer====\n", result)
 
 	return result, nil
+}
+
+func SemanticSearch(searchQuery string, maxResults int, store vectorstores.VectorStore, options ...vectorstores.Option) (searchResults []schema.Document, err error) {
+
+	searchResults, err = store.SimilaritySearch(context.Background(), searchQuery, maxResults, options...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("============== similarity search results ==============")
+
+	for _, doc := range searchResults {
+		fmt.Println("similarity search info -", doc.PageContent)
+		fmt.Println("similarity search score -", doc.Score)
+		fmt.Println("============================")
+
+	}
+
+	return searchResults, nil
 
 }
