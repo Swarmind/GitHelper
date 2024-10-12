@@ -98,6 +98,24 @@ func generateResponse(prompt string, namespace string) (string, error) {
 		"type": "doc",
 	}) */
 
+		fmt.Println("namespace is: ", namespace)
+
+		//🤕🤕🤕
+		searchResults, err := embeddings.SemanticSearch(prompt, 2, collection)
+		if err != nil {
+			return "", err
+		}
+	
+		contextBuilder := strings.Builder{}
+		for _, doc := range searchResults {
+			contextBuilder.WriteString(doc.PageContent)
+			contextBuilder.WriteString("\n")
+		}
+		contexts := contextBuilder.String()
+	
+		fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, prompt)
+
+
 	response, err := rag(prompt, AI, API_TOKEN, 1, collection)
 	if err != nil {
 		return "", err
