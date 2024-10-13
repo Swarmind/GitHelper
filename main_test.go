@@ -35,18 +35,26 @@ func Test_main (t *testing.T)   {
 	ai := os.Getenv("AI_ENDPOINT")
 	apit := os.Getenv("API_TOKEN")
 	db_link := os.Getenv("DB_URL")
-	//namesp := os.Getenv("REPO_NAME")
+
+	// test data
+	var repo_names []string
+	var test_prompts []string
 
 	AI = ai
 	API_TOKEN = apit
 	DB = db_link
-	//NS = "Hellper"
-	NS = "gitjob_lk"
-	//NS = "gitjob_api"
+	NS = "gitjob-api"
 
-	//generateResponse("what is the logic of command package? what is the logic of dialog package?",NS)
-	generateResponse("where is located login alhorithm and how does it work?",NS)
-	//generateResponse("where is located subscription alhorithm and how does it work?",NS)
+	repo_names = []string{"Hellper","gitjob_lk","gitjob-api", "Reflexia"}
+	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "explain how Task API works", "in what file is located scheduler API?", "where is project config prompt loading happens?" }
+
+	//generateResponse(test_prompts[2],repo_names[2])
+
+	
+	for i := 0; i < 4; i++ {
+		generateResponse(test_prompts[i],repo_names[i])
+	}
+		
 }
 
 
