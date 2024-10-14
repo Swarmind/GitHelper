@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -22,24 +22,29 @@ import (
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
-var Client *github.Client
+
 var AI string
 var API_TOKEN string
 var DB string
-var NS string
+var ClientMap = make(map[string]*github.Client)
+
+
+
 
 // Define your API endpoint for handling webhook requests.
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	client := Client
 
 	// Extract webhook event type from the header
 	eventType := github.WebHookType(r)
-	requestBody, err := ioutil.ReadAll(r.Body)
+	requestBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
 		return
 	}
+
+
+
 	// Parse event based on eventType
 	switch eventType {
 	case "installation_repositories":
@@ -73,6 +78,15 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("New issue opened: %s/%s Issue: %d Title: %s\n", repoOwner, repoName, issueID, issueTitle)
 			fmt.Println("Issue body is: ", issueBody)
 
+
+			//
+			client, err := getClientByRepoOwner(repoOwner)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
 			// Respond to the issue
 			response, err := generateResponse(issueBody, repoName)
 			if err != nil {
@@ -100,11 +114,13 @@ func generateResponse(prompt string, namespace string) (string, error) {
 
 		fmt.Println("namespace is: ", namespace)
 
+		/*
 		//🤕🤕🤕
 		searchResults, err := embeddings.SemanticSearch(prompt, 2, collection)
 		if err != nil {
 			return "", err
 		}
+		
 	
 		contextBuilder := strings.Builder{}
 		for _, doc := range searchResults {
@@ -114,9 +130,11 @@ func generateResponse(prompt string, namespace string) (string, error) {
 		contexts := contextBuilder.String()
 	
 		fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, prompt)
+		*/
 
 
-	response, err := rag(prompt, AI, API_TOKEN, 1, collection)
+
+	response, err := rag(prompt, AI, API_TOKEN, 2, collection)
 	if err != nil {
 		return "", err
 	}
@@ -146,35 +164,22 @@ func respond(client *github.Client, owner string, repo string, id int64, respons
 
 }
 
-func createClient(key_path string, app_id int) *github.Client {
-	//const gitHost = "https://git.api.com"
 
 
-	/*
-	privatePem, err := os.ReadFile(key_path)
-	if err != nil {
-		log.Fatalf("failed to read pem: %v", err)
-	}
+func createClients(app_id int) (error)  {
 
+	//var white_list []string
+	white_list := []string{"GitjobTeam","JackBekket"}	//TODO: change it to load from .env / .yaml and not hardcoded
 
-	itr, err := ghinstallation.NewAppsTransport(http.DefaultTransport, int64(app_id), privatePem)
-	if err != nil {
-		log.Fatalf("failed to create app transport: %v\n", err)
-	}
-	*/
-
+	var result []*github.Client	// not necessary
 	tr := http.DefaultTransport
 	pk_name := os.Getenv("PRIVATE_KEY_NAME")
 
 	itr, err := ghinstallation.NewAppsTransportKeyFromFile(tr, int64(app_id), pk_name)
     if err != nil {
         log.Fatal(err)
+		return err
     }
-
-
-
-
-	//itr.BaseURL = gitHost
 
 	//create git client with app transport
 	client := github.NewClient(
@@ -187,38 +192,77 @@ func createClient(key_path string, app_id int) *github.Client {
 
 	if client == nil {
 		log.Fatalf("failed to create git client for app: %v\n", err)
+		return err
 	}
 
 	installations, _, err := client.Apps.ListInstallations(context.Background(), &github.ListOptions{})
 	if err != nil {
 		log.Fatalf("failed to list installations: %v\n", err)
+		return err
 	}
+
+	// log installations
+	println("installations: ", installations)
+
 
 	//capture our installationId for our app
 	//we need this for the access token
 	var installID int64
 	for _, val := range installations {
 		installID = val.GetID()
+
+		user := val.GetAccount()
+		user_name := user.GetLogin()
+		log.Println("installed by entity_name:", user_name)  // repo owner (?)
+		target_type := val.GetTargetType()
+		log.Println("target tyoe: ", target_type)
+
+
+		//If whitelist does not contain our names throw error
+		if !contains(white_list, user_name) {
+			//log.Println("User %s is not in the whitelist. Skipping creating client for it.", user_name)
+			return fmt.Errorf("User %s is not in the whitelist. Skipping creating client for it.", user_name)
+		  }
+
+
+		token, _, err := client.Apps.CreateInstallationToken(
+			context.Background(),
+			installID,
+			&github.InstallationTokenOptions{})
+		if err != nil {
+			log.Fatalf("failed to create installation token: %v\n", err)
+			return err
+		}
+
+		apiClient := github.NewClient(nil).WithAuthToken(
+			token.GetToken(),
+		)
+		if apiClient == nil {
+			log.Fatalf("failed to create new git client with token: %v\n", err)
+			return err
+		}
+
+		//append
+		result = append(result, apiClient)
+
+		// add to global map user => client
+		ClientMap[user_name] = apiClient
 	}
 
-	token, _, err := client.Apps.CreateInstallationToken(
-		context.Background(),
-		installID,
-		&github.InstallationTokenOptions{})
-	if err != nil {
-		log.Fatalf("failed to create installation token: %v\n", err)
+	// print clients map (not necessary and can be removed)
+	log.Println("clients created: ", result)
+	return nil //if not error then we 
+}
+
+
+func getClientByRepoOwner(owner string) (*github.Client,error) {
+	client,ok := ClientMap[owner]
+	if ok {
+		return client, nil
 	}
+	return nil, fmt.Errorf("client not found for key: %s", owner)
 
-	apiClient := github.NewClient(nil).WithAuthToken(
-		token.GetToken(),
-	)
-	if apiClient == nil {
-		log.Fatalf("failed to create new git client with token: %v\n", err)
-	}
 
-	//log.Println("gh client: ", apiClient)
-
-	return apiClient
 }
 
 
@@ -229,26 +273,24 @@ func main() {
 	// creating github client from private key
 	_ = godotenv.Load()
 	_id := os.Getenv("APP_ID")
-	//wh_secret := os.Getenv("WEBHOOK_SECRET")
-	pk_path := os.Getenv("PRIVATE_KEY_PATH")
 	app_id, err := strconv.Atoi(_id)
 	if err != nil {
 		// ... handle error
 		panic(err)
 	}
-	Client = createClient(pk_path, app_id)
+	// creating clients for each installation of the app
+	err = createClients(app_id)
+	if err != nil {
+		log.Println("error creating clients: ", err)	// might be not in whitelist / unauthorized
+	}
 
-	//Test getting vectorstore from .env
-	// In production name should be replaced by event value
+	// helper url, helper api token, postgres link with embeddings store
 	ai := os.Getenv("AI_ENDPOINT")
 	apit := os.Getenv("API_TOKEN")
 	db_link := os.Getenv("DB_URL")
-	//namesp := os.Getenv("REPO_NAME")
-
 	AI = ai
 	API_TOKEN = apit
 	DB = db_link
-	//NS = namesp
 
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
@@ -264,6 +306,8 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 	return store, nil
 }
 
+
+// main function for retrieval-augmented generation
 func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	//base_url := os.Getenv("AI_BASEURL")
 	base_url := ai_url
@@ -312,3 +356,14 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 
 	return result, nil
 }
+
+
+func contains(slice []string, value string) bool {
+	for _, v := range slice {
+	  if v == value {
+		return true
+	  }
+	}
+	return false
+  }
+  
