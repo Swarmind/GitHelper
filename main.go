@@ -149,15 +149,31 @@ func respond(client *github.Client, owner string, repo string, id int64, respons
 func createClient(key_path string, app_id int) *github.Client {
 	//const gitHost = "https://git.api.com"
 
+
+	/*
 	privatePem, err := os.ReadFile(key_path)
 	if err != nil {
 		log.Fatalf("failed to read pem: %v", err)
 	}
 
+
 	itr, err := ghinstallation.NewAppsTransport(http.DefaultTransport, int64(app_id), privatePem)
 	if err != nil {
 		log.Fatalf("failed to create app transport: %v\n", err)
 	}
+	*/
+
+	tr := http.DefaultTransport
+	pk_name := os.Getenv("PRIVATE_KEY_NAME")
+
+	itr, err := ghinstallation.NewAppsTransportKeyFromFile(tr, int64(app_id), pk_name)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+
+
+
 	//itr.BaseURL = gitHost
 
 	//create git client with app transport
@@ -205,13 +221,7 @@ func createClient(key_path string, app_id int) *github.Client {
 	return apiClient
 }
 
-/* // Example implementation of your 3rd service call.
-func callThirdService(content string) (string, error) {
-	// Implement the logic to call your 3rd service here.
-	// ... (Replace this with your actual API call)
-	// For demonstration, return a fixed response.
-	return "From 3rd service!", nil
-} */
+
 
 func main() {
 	fmt.Println("main process started")
