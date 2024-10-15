@@ -1,4 +1,4 @@
-module github.com/jackbekket/GitHelper
+module github.com/JackBekket/GitHelper
 
 go 1.23.1
 

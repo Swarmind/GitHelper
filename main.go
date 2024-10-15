@@ -9,16 +9,15 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	embd "github.com/JackBekket/hellper/lib/embeddings"
-	embeddings "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
+
+	RAG "github.com/JackBekket/GitHelper/pkg/rag"
+
 	"github.com/google/go-github/v65/github"
 	"github.com/joho/godotenv"
-	"github.com/tmc/langchaingo/chains"
-	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
@@ -134,7 +133,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 
 
 
-	response, err := rag(prompt, AI, API_TOKEN, 2, collection)
+	response, err := RAG.StuffedQA_Rag(prompt, AI, API_TOKEN, 2, collection)
 	if err != nil {
 		return "", err
 	}
@@ -144,11 +143,9 @@ func generateResponse(prompt string, namespace string) (string, error) {
 func respond(client *github.Client, owner string, repo string, id int64, response string) {
 	ctx := context.Background()
 	// Craft a reply message from the response from the 3rd service.
-	replyMessage := fmt.Sprintf("Here's the response from our 3rd service:\n%s", response)
+	replyMessage := response
 
 	// Create a new comment on the issue using the GitHub API.
-
-	//client := github.NewClient(nil)
 	a, b, err := client.Issues.CreateComment(ctx, owner, repo, int(id), &github.IssueComment{
 		// Configure the comment with the issue's ID and other necessary details.
 		Body: &replyMessage,
@@ -307,6 +304,8 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 }
 
 
+
+/*
 // main function for retrieval-augmented generation
 func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	//base_url := os.Getenv("AI_BASEURL")
@@ -356,6 +355,7 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 
 	return result, nil
 }
+	*/
 
 
 func contains(slice []string, value string) bool {
