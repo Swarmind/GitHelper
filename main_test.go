@@ -24,6 +24,8 @@ var NS string
 
 
 
+
+// TODO: refactor it as outdated
 func Test_main (t *testing.T)   {
 
 

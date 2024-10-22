@@ -9,16 +9,15 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	embd "github.com/JackBekket/hellper/lib/embeddings"
-	embeddings "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
+
+	RAG "github.com/JackBekket/GitHelper/pkg/rag"
+
 	"github.com/google/go-github/v65/github"
 	"github.com/joho/godotenv"
-	"github.com/tmc/langchaingo/chains"
-	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
@@ -108,33 +107,11 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	if err != nil {
 		log.Println(err)
 	}
-	/* opts := vectorstores.WithFilters(map[string]string{
-		"type": "doc",
-	}) */
 
-		fmt.Println("namespace is: ", namespace)
+	fmt.Println("namespace is: ", namespace)
 
-		/*
-		//🤕🤕🤕
-		searchResults, err := embeddings.SemanticSearch(prompt, 2, collection)
-		if err != nil {
-			return "", err
-		}
-		
-	
-		contextBuilder := strings.Builder{}
-		for _, doc := range searchResults {
-			contextBuilder.WriteString(doc.PageContent)
-			contextBuilder.WriteString("\n")
-		}
-		contexts := contextBuilder.String()
-	
-		fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, prompt)
-		*/
-
-
-
-	response, err := rag(prompt, AI, API_TOKEN, 2, collection)
+	// join doc and code docs, two of each
+	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection)
 	if err != nil {
 		return "", err
 	}
@@ -144,11 +121,9 @@ func generateResponse(prompt string, namespace string) (string, error) {
 func respond(client *github.Client, owner string, repo string, id int64, response string) {
 	ctx := context.Background()
 	// Craft a reply message from the response from the 3rd service.
-	replyMessage := fmt.Sprintf("Here's the response from our 3rd service:\n%s", response)
+	replyMessage := response
 
 	// Create a new comment on the issue using the GitHub API.
-
-	//client := github.NewClient(nil)
 	a, b, err := client.Issues.CreateComment(ctx, owner, repo, int(id), &github.IssueComment{
 		// Configure the comment with the issue's ID and other necessary details.
 		Body: &replyMessage,
@@ -307,55 +282,7 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 }
 
 
-// main function for retrieval-augmented generation
-func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
-	//base_url := os.Getenv("AI_BASEURL")
-	base_url := ai_url
 
-	// Create an embeddings client using the specified API and embedding model
-	llm, err := openai.New(
-		openai.WithBaseURL(base_url),
-		openai.WithAPIVersion("v1"),
-		openai.WithToken(api_token),
-		openai.WithModel("tiger-gemma-9b-v1-i1"),
-		openai.WithEmbeddingModel("text-embedding-ada-002"),
-	)
-	if err != nil {
-		return "", err
-	}
-
-	//🤕🤕🤕
-	searchResults, err := embeddings.SemanticSearch(question, numOfResults, store)
-	if err != nil {
-		return "", err
-	}
-
-	contextBuilder := strings.Builder{}
-	for _, doc := range searchResults {
-		contextBuilder.WriteString(doc.PageContent)
-		contextBuilder.WriteString("\n")
-	}
-	contexts := contextBuilder.String()
-
-	fullPrompt := fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, question)
-
-	result, err = chains.Run(
-		context.Background(),
-		chains.NewRetrievalQAFromLLM(
-			llm,
-			vectorstores.ToRetriever(store, numOfResults),
-		),
-		fullPrompt,
-		chains.WithMaxTokens(8192),
-	)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println("====final answer====\n", result)
-
-	return result, nil
-}
 
 
 func contains(slice []string, value string) bool {
