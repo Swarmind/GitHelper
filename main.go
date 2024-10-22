@@ -30,7 +30,13 @@ var ClientMap = make(map[string]*github.Client)
 
 
 
-// Define your API endpoint for handling webhook requests.
+/* 
+	Handle events we got from github
+	if it is installation (meaninig that app is installed to new account or repository) -- print this installation
+	if it is new issue event -- it tries to call RAG with documents collection associated with this repo
+
+
+*/
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -102,6 +108,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
 func generateResponse(prompt string, namespace string) (string, error) {
 	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
@@ -111,7 +118,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	fmt.Println("namespace is: ", namespace)
 
 	// join doc and code docs, two of each
-	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection)
+	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection)	// call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it)
 	if err != nil {
 		return "", err
 	}
@@ -241,7 +248,10 @@ func getClientByRepoOwner(owner string) (*github.Client,error) {
 }
 
 
+/*
+	This is github application, which handle updates from github
 
+*/
 func main() {
 	fmt.Println("main process started")
 
@@ -272,6 +282,7 @@ func main() {
 	//log.Fatal(http.ListenAndServe(":8086", nil))
 	log.Fatal(http.ListenAndServe(":8186", nil))
 }
+
 
 func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
 	store, err := embd.GetVectorStoreWithOptions(ai_url, api_token, db_link, namespace) // ai, api, db, namespace
