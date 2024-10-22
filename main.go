@@ -109,6 +109,8 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 
+
+// Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
 func generateResponse(prompt string, namespace string) (string, error) {
 	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
@@ -118,7 +120,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	fmt.Println("namespace is: ", namespace)
 
 	// join doc and code docs, two of each
-	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection)	// call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it)
+	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection)	// call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
 	if err != nil {
 		return "", err
 	}
