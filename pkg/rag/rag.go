@@ -11,7 +11,7 @@ import (
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
-// main function for retrieval-augmented generation  (old one)
+// main function for retrieval-augmented generation  (old one)  -- will be deprecated
 func Rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	base_url := ai_url
 
@@ -60,8 +60,12 @@ func Rag(question string, ai_url string, api_token string, numOfResults int, sto
 	return result, nil
 }
 
-func RagWithFilteres(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore)  (result string, err error) {
-		//base_url := os.Getenv("AI_BASEURL")
+
+
+// Hardcoded func which call RAG with doc & code metadata
+func RagReflexia(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
+
+
 		base_url := ai_url
 
 		// Create an embeddings client using the specified API and embedding model
@@ -75,54 +79,195 @@ func RagWithFilteres(question string, ai_url string, api_token string, numOfResu
 		if err != nil {
 			return "", err
 		}
-		
+
+
+		// First step -- get the docs
 
 		// filteres
 		filters := map[string]any{
 			"type": "doc",
-			//"author": "John Doe",
 		}
 		
-
-		/*	If we need additional filters 
-		options := vectorstores.Options{
-			Filters: filters,
-		}
-		*/
-
-		option := vectorstores.WithFilters(filters)
-		  
-		searchResults, err := embeddings.SemanticSearch(question, numOfResults, store, option)
-
+		option := vectorstores.WithFilters(filters)  
+		Documentation, err := embeddings.SemanticSearch(question, numOfResults, store, option)
 		if err != nil {
 			return "", err
 		}
-	
+
+		/*
 		contextBuilder := strings.Builder{}
-		for _, doc := range searchResults {
+		for _, doc := range Documentation {
 			contextBuilder.WriteString(doc.PageContent)
 			contextBuilder.WriteString("\n")
 		}
 		contexts := contextBuilder.String()
 	
-		fullPrompt := fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, question)
+		fullPrompt := fmt.Sprintf("Context Documentation: %s\n\nQuestion: %s", contexts, question)
+		*/
+
+
+		//----------------------  we got documentation 
+		// step 2 -- get the code and add to documentation
+				// filteres
+				filters = map[string]any{
+					"type": "code",
+				}
+				
+				option = vectorstores.WithFilters(filters)  
+				CodeContent, err := embeddings.SemanticSearch(question, numOfResults, store, option)
+				if err != nil {
+					return "", err
+				}
+		
+				/*
+				//contextBuilder := strings.Builder{}
+				for _, doc := range CodeContent {
+					contextBuilder.WriteString(doc.PageContent)
+					contextBuilder.WriteString("\n")
+				}
+				contexts = contextBuilder.String()
+			
+				fullPrompt = fmt.Sprintf("Context Documentation and Code: %s\n\nQuestion: %s", contexts, question)
+				*/
+		//
+
+			InputDocs := append(Documentation, CodeContent...)    // 
 	
-		result, err = chains.Run(
+	/*
+	result, err = chains.Run(
 			context.Background(),
 			chains.NewRetrievalQAFromLLM(
 				llm,
 				vectorstores.ToRetriever(store, numOfResults),
 			),
-			fullPrompt,
+			fullPrompt,	// works like stuffed QA -- it get's all doc's and code context alongside with question
 			chains.WithMaxTokens(8192),
 		)
 		if err != nil {
 			return "", err
 		}
+	*/
+
+	stuffQAChain := chains.LoadStuffQA(llm)
+
+		
+	answer, err := chains.Call(context.Background(), stuffQAChain, map[string]any{
+		"input_documents": InputDocs,
+		"question":        question,
+	})
+	if err != nil {
+		return "",err
+	}
+	fmt.Println("RAG stuffed QA answer: ", answer)
 	
-		fmt.Println("====final answer====\n", result)
+
+		s,ok := answer["text"].(string)
+		if ok {
+			result = s
+		}
+	
+		fmt.Println("(RAG REFLEXIA DOC & CODE)====final answer====\n", result)
 	
 		return result, nil
+	}
+
+
+
+func RagWithFilteres(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore,filters ...map[string]any)  (result string, err error) {
+		base_url := ai_url
+		// Create an embeddings client using the specified API and embedding model
+		llm, err := openai.New(
+			openai.WithBaseURL(base_url),
+			openai.WithAPIVersion("v1"),
+			openai.WithToken(api_token),
+			openai.WithModel("tiger-gemma-9b-v1-i1"),
+			openai.WithEmbeddingModel("text-embedding-ada-002"),
+		)
+		if err != nil {
+			return "", err
+		}
+		
+		if filters != nil {
+			// Use the provided filters here
+			filter := filters;
+			option := vectorstores.WithFilters(filter)
+			result, err = chains.Run(
+				context.Background(),
+				chains.NewRetrievalQAFromLLM(	// stuffed QA
+					llm,
+					vectorstores.ToRetriever(store, numOfResults,option),
+				),
+				question,
+				chains.WithMaxTokens(8192),
+			)
+			if err != nil {
+				return "", err
+			}
+
+		} else {
+			// Use the default behavior without filters
+			result, err = chains.Run(
+				context.Background(),
+				chains.NewRetrievalQAFromLLM(	// stuffed QA
+					llm,
+					vectorstores.ToRetriever(store, numOfResults),
+				),
+				question,
+				chains.WithMaxTokens(8192),
+			)
+			if err != nil {
+				return "", err
+			}
+		}
+	
+		fmt.Println("(RAG WITH ONLY FILTERES)====final answer====\n", result)
+	
+		return result, nil
+
+}
+
+
+
+func RagWithOptions(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore,option ...vectorstores.Option)  (result string, err error) {
+	base_url := ai_url
+	// Create an embeddings client using the specified API and embedding model
+	llm, err := openai.New(
+		openai.WithBaseURL(base_url),
+		openai.WithAPIVersion("v1"),
+		openai.WithToken(api_token),
+		openai.WithModel("tiger-gemma-9b-v1-i1"),
+		openai.WithEmbeddingModel("text-embedding-ada-002"),
+	)
+	if err != nil {
+		return "", err
+	}
+
+
+
+
+
+		//option := vectorstores.WithFilters(filter)
+		result, err = chains.Run(
+			context.Background(),
+			chains.NewRetrievalQAFromLLM(	// stuffed QA
+				llm,
+				vectorstores.ToRetriever(store, numOfResults,option...),
+			),
+			question,
+			chains.WithMaxTokens(8192),
+		)
+		if err != nil {
+			return "", err
+		}
+
+
+
+	fmt.Println("(RAG WITH ONLY FILTERES AS OPTION)====final answer====\n", result)
+
+	return result, nil
+
+
+
 
 }
 
@@ -187,7 +332,6 @@ func StuffedQA_Rag(question string, ai_url string, api_token string, numOfResult
 
 
 
-// Test shows bad result, probably will return here with langraph, cause langchain is not flexible enough to control one-by-one chain
 func RefinedQA_RAG(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	
 		//base_url := os.Getenv("AI_BASEURL")
@@ -220,7 +364,7 @@ func RefinedQA_RAG(question string, ai_url string, api_token string, numOfResult
 	refineQAChain := chains.LoadRefineQA(llm)
 	answer, err := chains.Call(context.Background(), refineQAChain, map[string]any{
 		"input_documents": searchResults,
-		"question":        "Where did Ankush go to collage?",
+		"question":        question,
 	})
 	if err != nil {
 		return "",err
