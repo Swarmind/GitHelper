@@ -19,14 +19,11 @@ var DB string
 var NS string
 
 
-
+// This test call RAG with optional filteres
 func Test_RagWithFilteres(T *testing.T)  {
-	
 	fmt.Println("This is Rag with Filteres test")
 
 	_ = godotenv.Load()
-
-
 	//Test getting vectorstore from .env
 	// In production name should be replaced by event value
 	ai := os.Getenv("AI_ENDPOINT")
@@ -49,21 +46,14 @@ func Test_RagWithFilteres(T *testing.T)  {
 	if err != nil {
 		log.Println(err)
 	}
-	/* opts := vectorstores.WithFilters(map[string]string{
-		"type": "doc",
-	}) */
-
 	fmt.Println("namespace is: ", repo_names[0])
-
 
 	filters := map[string]any{
 		"type": "doc",
 	}
-
 	option := vectorstores.WithFilters(filters)
 
 
-	
 	response, err := RAG.RagWithOptions(test_prompts[0], AI, API_TOKEN, 2, collection,option)
 	if err != nil {
 		log.Panic(err)
@@ -78,12 +68,11 @@ func Test_RagWithFilteres(T *testing.T)  {
 		
 }
 
-func Test_RagReflexia(T *testing.T)  {
-	
-	fmt.Println("this is Test RAG Reflexia")
+// This test function is calling Retrival-Augmented generation with two types of document (doc's and code) and call 'stuffed' method of RAG
+func Test_RagReflexia(T *testing.T)  {	
+	fmt.Println("this is Test RAG with 'type: doc + type: code' metadata")
 
 	_ = godotenv.Load()
-
 
 	//Test getting vectorstore from .env
 	// In production name should be replaced by event value
@@ -107,10 +96,6 @@ func Test_RagReflexia(T *testing.T)  {
 	if err != nil {
 		log.Println(err)
 	}
-	/* opts := vectorstores.WithFilters(map[string]string{
-		"type": "doc",
-	}) */
-
 	fmt.Println("namespace is: ", repo_names[0])
 	
 	response, err := RAG.RagReflexia(test_prompts[0], AI, API_TOKEN, 2, collection)
@@ -124,48 +109,10 @@ func Test_RagReflexia(T *testing.T)  {
 		generateResponseStuffQA(test_prompts[i],repo_names[i])
 	}
 	*/
-		
 }
 
 
-/*
-func Test_Rag(T *testing.T)  {
-	
-	fmt.Println("this is test RAG simple")
-
-	_ = godotenv.Load()
-
-
-	//Test getting vectorstore from .env
-	// In production name should be replaced by event value
-	ai := os.Getenv("AI_ENDPOINT")
-	apit := os.Getenv("API_TOKEN")
-	db_link := os.Getenv("DB_URL")
-
-	// test data
-	var repo_names []string
-	var test_prompts []string
-
-	AI = ai
-	API_TOKEN = apit
-	DB = db_link
-	NS = "gitjob-api"
-
-	repo_names = []string{"Hellper","gitjob_lk","gitjob-api", "Reflexia"}
-	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?","Explain how Task API works", "in what file is located activity parser?", "where is project config prompt loading happens?" }
-
-	//generateResponse(test_prompts[0],repo_names[0])
-
-	
-	
-	for i := 0; i < 3; i++ {
-		generateResponseStuffQA(test_prompts[i],repo_names[i])
-	}
-	
-		
-}
-*/
-
+// This func is testing stuffed method of RAG
 func Test_StuffRag(T *testing.T)  {
 	
 	println("this is STUFF RAG TEST")
@@ -213,6 +160,8 @@ func Test_StuffRag(T *testing.T)  {
 }
 
 
+
+// This test is calling Refined QA method of RAG
 func Test_RefinedQA_RAG(T *testing.T)  {
 	
 	println("this is REFINED QA test")
@@ -260,59 +209,6 @@ func Test_RefinedQA_RAG(T *testing.T)  {
 
 
 
-
-
-
-/*
-func generateResponseRefinedQA(prompt string, namespace string) (string, error) {
-	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Println("namespace is: ", namespace)
-	
-	response, err := RAG.RefinedQA_RAG(prompt, AI, API_TOKEN, 2, collection)
-	if err != nil {
-		return "", err
-	}
-	return response, nil
-	
-}
-
-
-func generateResponseStuffQA(prompt string, namespace string) (string, error) {
-	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
-	if err != nil {
-		log.Println(err)
-	}
-
-
-	fmt.Println("namespace is: ", namespace)
-	
-	response, err := RAG.StuffedQA_Rag(prompt, AI, API_TOKEN, 2, collection)
-	if err != nil {
-		return "", err
-	}
-	return response, nil
-	
-}
-
-func generateResponse(prompt string, namespace string) (string, error) {
-	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
-	if err != nil {
-		log.Println(err)
-	}
-
-
-	fmt.Println("namespace is: ", namespace)
-	
-	response, err := RAG.Rag(prompt, AI, API_TOKEN, 2, collection)
-	if err != nil {
-		return "", err
-	}
-	return response, nil
-}
-*/	
 
 func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
 	store, err := embeddings.GetVectorStoreWithOptions(ai_url, api_token, db_link, namespace) // ai, api, db, namespace
