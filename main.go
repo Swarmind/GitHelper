@@ -102,7 +102,19 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("response generated")
 			respond(client, repoOwner, repoName, int64(issueID), response)
 		}
-
+	case "push":
+		event := new(github.PushEvent)
+		err := json.Unmarshal(requestBody, event)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error unmarshalling push event: %v", err), http.StatusBadRequest)
+			return
+		}
+		ref := event.Ref
+		log.Println("ref branch of push: ", ref)
+		repo := event.Repo.Name
+		log.Println("push into repo name: ", repo)
+		// TODO: implement calls for push event
+		// TODO: add checks if repo is one of our repos
 	default:
 		http.Error(w, "Unknown event type received", http.StatusBadRequest)
 	}
