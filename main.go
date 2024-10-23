@@ -186,8 +186,9 @@ func createClients(app_id int) (error)  {
 	}
 
 	// log installations
-	log.Println("installations: ", installations)
+	//log.Println("installations: ", installations)
 	for _, installation := range installations {
+		log.Println("installation : ", installation)
 		log.Println("repository selection: ", installation.RepositorySelection)
 	}
 
