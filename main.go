@@ -186,7 +186,7 @@ func createClients(app_id int) (error)  {
 	}
 
 	// log installations
-	println("installations: ", installations)
+	log.Println("installations: ", installations)
 
 
 	//capture our installationId for our app
