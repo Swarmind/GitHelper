@@ -115,7 +115,6 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Println("push into repo name: ", *repo)
 		// TODO: implement calls for push event
 		// TODO: add checks if repo is one of our repos
-		// This is test comment to check if app is reciving push events
 	default:
 		http.Error(w, "Unknown event type received", http.StatusBadRequest)
 	}
