@@ -26,8 +26,43 @@ var AI string
 var API_TOKEN string
 var DB string
 var ClientMap = make(map[string]*github.Client)
+var white_list = []string{"GitjobTeam","JackBekket"}	//TODO: change it to load from .env / .yaml and not hardcoded
 
 
+/*
+	This is github application, which handle updates from github
+
+*/
+func main() {
+	fmt.Println("main process started")
+
+	// creating github client from private key
+	_ = godotenv.Load()
+	_id := os.Getenv("APP_ID")
+	app_id, err := strconv.Atoi(_id)
+	if err != nil {
+		// ... handle error
+		panic(err)
+	}
+	// creating clients for each installation of the app
+	err = createClients(app_id)
+	if err != nil {
+		log.Println("error creating clients: ", err)	// might be not in whitelist / unauthorized
+	}
+
+	// helper url, helper api token, postgres link with embeddings store
+	ai := os.Getenv("AI_ENDPOINT")
+	apit := os.Getenv("API_TOKEN")
+	db_link := os.Getenv("DB_URL")
+	AI = ai
+	API_TOKEN = apit
+	DB = db_link
+
+	// ... (Set up your webhook endpoint and start the server)
+	http.HandleFunc("/webhook", handleWebhook)
+	//log.Fatal(http.ListenAndServe(":8086", nil))
+	log.Fatal(http.ListenAndServe(":8186", nil))
+}
 
 
 /* 
@@ -47,7 +82,6 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
 		return
 	}
-
 
 
 	// Parse event based on eventType
@@ -109,15 +143,38 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Error unmarshalling push event: %v", err), http.StatusBadRequest)
 			return
 		}
+
+		owner_name := event.Repo.Owner.Login
+		log.Println("owner of repo: ", *owner_name)
+		check := checkWhitelist(*owner_name)
+		if check == false {
+			http.Error(w, fmt.Sprintf("Error user (owner) is not in the whitelist: %v", err), http.StatusBadRequest)
+			return
+		}
+
 		ref := event.Ref
 		log.Println("ref branch of push: ", *ref)
 		repo := event.Repo.Name
 		log.Println("push into repo name: ", *repo)
-		// TODO: implement calls for push event
-		// TODO: add checks if repo is one of our repos
+		if *ref == "refs/heads/master" || *ref == "refs/heads/main" {
+			// TODO: implement calls for push event
+			// TODO: we need to call Reflexia (re)generation of documentation for this event
+			log.Println("push to master or main branch of a repo")
+		}
 	default:
 		http.Error(w, "Unknown event type received", http.StatusBadRequest)
 	}
+}
+
+
+func checkWhitelist(owner_name string) (bool) {
+			//If whitelist does not contain our names return false 
+			if !contains(white_list, owner_name) {
+				log.Println("User %s is not in the whitelist. Skipping creating client for it.", owner_name)
+				return false
+			} else {
+				return true
+			}
 }
 
 
@@ -164,9 +221,6 @@ func respond(client *github.Client, owner string, repo string, id int64, respons
 
 func createClients(app_id int) (error)  {
 
-	//var white_list []string
-	white_list := []string{"GitjobTeam","JackBekket"}	//TODO: change it to load from .env / .yaml and not hardcoded
-
 	var result []*github.Client	// not necessary
 	tr := http.DefaultTransport
 	pk_name := os.Getenv("PRIVATE_KEY_NAME")
@@ -184,7 +238,6 @@ func createClients(app_id int) (error)  {
 			Timeout:   time.Second * 30,
 		},
 	)
-	//)
 
 	if client == nil {
 		log.Fatalf("failed to create git client for app: %v\n", err)
@@ -197,8 +250,6 @@ func createClients(app_id int) (error)  {
 		return err
 	}
 
-	// log installations
-	//log.Println("installations: ", installations)
 	for _, installation := range installations {
 		log.Println("installation : ", *installation)
 		log.Println("repository selection: ", *installation.RepositorySelection)
@@ -266,40 +317,7 @@ func getClientByRepoOwner(owner string) (*github.Client,error) {
 }
 
 
-/*
-	This is github application, which handle updates from github
 
-*/
-func main() {
-	fmt.Println("main process started")
-
-	// creating github client from private key
-	_ = godotenv.Load()
-	_id := os.Getenv("APP_ID")
-	app_id, err := strconv.Atoi(_id)
-	if err != nil {
-		// ... handle error
-		panic(err)
-	}
-	// creating clients for each installation of the app
-	err = createClients(app_id)
-	if err != nil {
-		log.Println("error creating clients: ", err)	// might be not in whitelist / unauthorized
-	}
-
-	// helper url, helper api token, postgres link with embeddings store
-	ai := os.Getenv("AI_ENDPOINT")
-	apit := os.Getenv("API_TOKEN")
-	db_link := os.Getenv("DB_URL")
-	AI = ai
-	API_TOKEN = apit
-	DB = db_link
-
-	// ... (Set up your webhook endpoint and start the server)
-	http.HandleFunc("/webhook", handleWebhook)
-	//log.Fatal(http.ListenAndServe(":8086", nil))
-	log.Fatal(http.ListenAndServe(":8186", nil))
-}
 
 
 func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
@@ -309,10 +327,6 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 	}
 	return store, nil
 }
-
-
-
-
 
 func contains(slice []string, value string) bool {
 	for _, v := range slice {
