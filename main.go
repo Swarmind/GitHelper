@@ -11,27 +11,24 @@ import (
 	"strconv"
 	"time"
 
+	reflexia "github.com/JackBekket/GitHelper/internal/reflexia_integration"
+	RAG "github.com/JackBekket/GitHelper/pkg/rag"
 	embd "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
-
-	RAG "github.com/JackBekket/GitHelper/pkg/rag"
 
 	"github.com/google/go-github/v65/github"
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
-
 var AI string
 var API_TOKEN string
 var DB string
 var ClientMap = make(map[string]*github.Client)
-var white_list = []string{"GitjobTeam","JackBekket"}	//TODO: change it to load from .env / .yaml and not hardcoded
-
+var white_list = []string{"GitjobTeam", "JackBekket"} //TODO: change it to load from .env / .yaml and not hardcoded
 
 /*
-	This is github application, which handle updates from github
-
+This is github application, which handle updates from github
 */
 func main() {
 	fmt.Println("main process started")
@@ -47,7 +44,7 @@ func main() {
 	// creating clients for each installation of the app
 	err = createClients(app_id)
 	if err != nil {
-		log.Println("error creating clients: ", err)	// might be not in whitelist / unauthorized
+		log.Println("error creating clients: ", err) // might be not in whitelist / unauthorized
 	}
 
 	// helper url, helper api token, postgres link with embeddings store
@@ -64,13 +61,10 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8186", nil))
 }
 
-
-/* 
-	Handle events we got from github
-	if it is installation (meaninig that app is installed to new account or repository) -- print this installation
-	if it is new issue event -- it tries to call RAG with documents collection associated with this repo
-
-
+/*
+Handle events we got from github
+if it is installation (meaninig that app is installed to new account or repository) -- print this installation
+if it is new issue event -- it tries to call RAG with documents collection associated with this repo
 */
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -82,7 +76,6 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
 		return
 	}
-
 
 	// Parse event based on eventType
 	switch eventType {
@@ -117,7 +110,6 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("New issue opened: %s/%s Issue: %d Title: %s\n", repoOwner, repoName, issueID, issueTitle)
 			fmt.Println("Issue body is: ", issueBody)
 
-
 			//
 			client, err := getClientByRepoOwner(repoOwner)
 			if err != nil {
@@ -147,7 +139,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		owner_name := event.Repo.Owner.Login
 		log.Println("owner of repo: ", *owner_name)
 		check := checkWhitelist(*owner_name)
-		if check == false {
+		if !check {
 			http.Error(w, fmt.Sprintf("Error user (owner) is not in the whitelist: %v", err), http.StatusBadRequest)
 			return
 		}
@@ -157,8 +149,16 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		repo := event.Repo.Name
 		log.Println("push into repo name: ", *repo)
 		if *ref == "refs/heads/master" || *ref == "refs/heads/main" {
-			// TODO: implement calls for push event
-			// TODO: we need to call Reflexia (re)generation of documentation for this event
+			repoURL := fmt.Sprintf("https://github.com/%s/%s", *owner_name, *repo)
+
+			pkgRunner, err := reflexia.InitPackageRunner(repoURL)
+			if err != nil {
+				fmt.Println(err)
+			}
+			_, _, _, _, err = pkgRunner.RunPackages()
+			if err != nil {
+				fmt.Println(err)
+			}
 			log.Println("push to master or main branch of a repo")
 		}
 	default:
@@ -166,18 +166,15 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-func checkWhitelist(owner_name string) (bool) {
-			//If whitelist does not contain our names return false 
-			if !contains(white_list, owner_name) {
-				log.Println("User %s is not in the whitelist. Skipping creating client for it.", owner_name)
-				return false
-			} else {
-				return true
-			}
+func checkWhitelist(owner_name string) bool {
+	//If whitelist does not contain our names return false
+	if !contains(white_list, owner_name) {
+		log.Printf("User %s is not in the whitelist. Skipping creating client for it.", owner_name)
+		return false
+	} else {
+		return true
+	}
 }
-
-
 
 // Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
 func generateResponse(prompt string, namespace string) (string, error) {
@@ -189,7 +186,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	fmt.Println("namespace is: ", namespace)
 
 	// join doc and code docs, two of each
-	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection)	// call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
+	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection) // call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
 	if err != nil {
 		return "", err
 	}
@@ -217,19 +214,17 @@ func respond(client *github.Client, owner string, repo string, id int64, respons
 
 }
 
+func createClients(app_id int) error {
 
-
-func createClients(app_id int) (error)  {
-
-	var result []*github.Client	// not necessary
+	var result []*github.Client // not necessary
 	tr := http.DefaultTransport
 	pk_name := os.Getenv("PRIVATE_KEY_NAME")
 
 	itr, err := ghinstallation.NewAppsTransportKeyFromFile(tr, int64(app_id), pk_name)
-    if err != nil {
-        log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
 		return err
-    }
+	}
 
 	//create git client with app transport
 	client := github.NewClient(
@@ -255,7 +250,6 @@ func createClients(app_id int) (error)  {
 		log.Println("repository selection: ", *installation.RepositorySelection)
 	}
 
-
 	//capture our installationId for our app
 	//we need this for the access token
 	var installID int64
@@ -264,17 +258,15 @@ func createClients(app_id int) (error)  {
 
 		user := val.GetAccount()
 		user_name := user.GetLogin()
-		log.Println("installed by entity_name:", user_name)  // repo owner (?)
+		log.Println("installed by entity_name:", user_name) // repo owner (?)
 		target_type := val.GetTargetType()
 		log.Println("target tyoe: ", target_type)
-
 
 		//If whitelist does not contain our names throw error
 		if !contains(white_list, user_name) {
 			//log.Println("User %s is not in the whitelist. Skipping creating client for it.", user_name)
-			return fmt.Errorf("User %s is not in the whitelist. Skipping creating client for it.", user_name)
-		  }
-
+			return fmt.Errorf("user %s is not in the whitelist. Skipping creating client for it", user_name)
+		}
 
 		token, _, err := client.Apps.CreateInstallationToken(
 			context.Background(),
@@ -302,23 +294,17 @@ func createClients(app_id int) (error)  {
 
 	// print clients map (not necessary and can be removed)
 	log.Println("clients created: ", result)
-	return nil //if not error then we 
+	return nil //if not error then we
 }
 
-
-func getClientByRepoOwner(owner string) (*github.Client,error) {
-	client,ok := ClientMap[owner]
+func getClientByRepoOwner(owner string) (*github.Client, error) {
+	client, ok := ClientMap[owner]
 	if ok {
 		return client, nil
 	}
 	return nil, fmt.Errorf("client not found for key: %s", owner)
 
-
 }
-
-
-
-
 
 func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
 	store, err := embd.GetVectorStoreWithOptions(ai_url, api_token, db_link, namespace) // ai, api, db, namespace
@@ -330,10 +316,9 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 
 func contains(slice []string, value string) bool {
 	for _, v := range slice {
-	  if v == value {
-		return true
-	  }
+		if v == value {
+			return true
+		}
 	}
 	return false
-  }
-  
+}
