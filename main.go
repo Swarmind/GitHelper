@@ -151,7 +151,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		if *ref == "refs/heads/master" || *ref == "refs/heads/main" {
 			repoURL := fmt.Sprintf("https://github.com/%s/%s", *owner_name, *repo)
 
-			pkgRunner, err := reflexia.InitPackageRunner(repoURL, *owner_name)
+			pkgRunner, err := reflexia.InitPackageRunner(repoURL)
 			if err != nil {
 				fmt.Println(err)
 			}
