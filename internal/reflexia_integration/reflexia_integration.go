@@ -39,7 +39,7 @@ type Config struct {
 	CachePath                     *string
 }
 
-func InitPackageRunner(ghLink, ghUsername string) runner.PackageRunnerService {
+func InitPackageRunner(ghLink, ghUsername string) (runner.PackageRunnerService, error) {
 	initialConfig, err := initConfig(ghLink, ghUsername)
 	if err != nil {
 		log.Fatalf("initConfig(...) error: %v", err)
@@ -109,7 +109,7 @@ func InitPackageRunner(ghLink, ghUsername string) runner.PackageRunnerService {
 		OverwriteReadme:   initialConfig.OverwriteReadme,
 		WithFileSummary:   initialConfig.WithFileSummary,
 	}
-	return pkgRunner
+	return pkgRunner, nil
 }
 
 // TODO: I fear no man, but this thing scares me...
@@ -162,7 +162,7 @@ func loadEnv(key string) string {
 
 func initConfig(ghLink, ghUsername string) (*Config, error) {
 	if err := godotenv.Load(); err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 
 	config := Config{}

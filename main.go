@@ -151,7 +151,14 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		if *ref == "refs/heads/master" || *ref == "refs/heads/main" {
 			repoURL := fmt.Sprintf("https://github.com/%s/%s", *owner_name, *repo)
 
-			reflexia.InitPackageRunner(repoURL, *owner_name)
+			pkgRunner, err := reflexia.InitPackageRunner(repoURL, *owner_name)
+			if err != nil {
+				fmt.Println(err)
+			}
+			_, _, _, _, err = pkgRunner.RunPackages()
+			if err != nil {
+				fmt.Println(err)
+			}
 			log.Println("push to master or main branch of a repo")
 		}
 	default:
