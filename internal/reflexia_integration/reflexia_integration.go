@@ -83,13 +83,13 @@ func InitPackageRunner(ghLink string) (runner.PackageRunnerService, error) {
 		Store: vectorStore,
 	}
 	fmt.Printf("Initialized vector store with %s as project name\n", projectName)
-
+	nilStr := ""
 	pkgRunner := runner.PackageRunnerService{
 		PkgFiles:          pkgFiles,
 		ProjectConfig:     projectConfig,
 		SummarizeService:  summarizeService,
 		EmbeddingsService: embeddingsService,
-		ExactPackages:     nil,
+		ExactPackages:     &nilStr,
 		OverwriteReadme:   false,
 		WithFileSummary:   false,
 	}
