@@ -24,8 +24,8 @@ import (
 var AI string
 var API_TOKEN string
 var DB string
-var ClientMap = make(map[string]*github.Client)
-var white_list = []string{"GitjobTeam", "JackBekket"} //TODO: change it to load from .env / .yaml and not hardcoded
+var whiteList = []string{"GitjobTeam", "JackBekket"} //TODO: change it to load from .env / .yaml and not hardcoded
+var APP_ID = -1
 
 /*
 This is github application, which handle updates from github
@@ -41,11 +41,7 @@ func main() {
 		// ... handle error
 		panic(err)
 	}
-	// creating clients for each installation of the app
-	err = createClients(app_id)
-	if err != nil {
-		log.Println("error creating clients: ", err) // might be not in whitelist / unauthorized
-	}
+	APP_ID = app_id
 
 	// helper url, helper api token, postgres link with embeddings store
 	ai := os.Getenv("AI_ENDPOINT")
@@ -168,7 +164,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 func checkWhitelist(owner_name string) bool {
 	//If whitelist does not contain our names return false
-	if !contains(white_list, owner_name) {
+	if !contains(whiteList, owner_name) {
 		log.Printf("User %s is not in the whitelist. Skipping creating client for it.", owner_name)
 		return false
 	} else {
@@ -214,16 +210,13 @@ func respond(client *github.Client, owner string, repo string, id int64, respons
 
 }
 
-func createClients(app_id int) error {
-
-	var result []*github.Client // not necessary
+func getClientByRepoOwner(owner string) (*github.Client, error) {
 	tr := http.DefaultTransport
-	pk_name := os.Getenv("PRIVATE_KEY_NAME")
+	pkName := os.Getenv("PRIVATE_KEY_NAME")
 
-	itr, err := ghinstallation.NewAppsTransportKeyFromFile(tr, int64(app_id), pk_name)
+	itr, err := ghinstallation.NewAppsTransportKeyFromFile(tr, int64(APP_ID), pkName)
 	if err != nil {
 		log.Fatal(err)
-		return err
 	}
 
 	//create git client with app transport
@@ -236,13 +229,11 @@ func createClients(app_id int) error {
 
 	if client == nil {
 		log.Fatalf("failed to create git client for app: %v\n", err)
-		return err
 	}
 
 	installations, _, err := client.Apps.ListInstallations(context.Background(), &github.ListOptions{})
 	if err != nil {
 		log.Fatalf("failed to list installations: %v\n", err)
-		return err
 	}
 
 	for _, installation := range installations {
@@ -257,15 +248,19 @@ func createClients(app_id int) error {
 		installID = val.GetID()
 
 		user := val.GetAccount()
-		user_name := user.GetLogin()
-		log.Println("installed by entity_name:", user_name) // repo owner (?)
-		target_type := val.GetTargetType()
-		log.Println("target tyoe: ", target_type)
+		username := user.GetLogin()
+		log.Println("installed by entity_name:", username) // repo owner (?)
+		targetType := val.GetTargetType()
+		log.Println("target type: ", targetType)
+
+		if username != owner {
+			continue
+		}
 
 		//If whitelist does not contain our names throw error
-		if !contains(white_list, user_name) {
+		if !contains(whiteList, username) {
 			//log.Println("User %s is not in the whitelist. Skipping creating client for it.", user_name)
-			return fmt.Errorf("user %s is not in the whitelist. Skipping creating client for it", user_name)
+			return nil, fmt.Errorf("user %s is not in the whitelist. Skipping creating client for it", username)
 		}
 
 		token, _, err := client.Apps.CreateInstallationToken(
@@ -274,7 +269,6 @@ func createClients(app_id int) error {
 			&github.InstallationTokenOptions{})
 		if err != nil {
 			log.Fatalf("failed to create installation token: %v\n", err)
-			return err
 		}
 
 		apiClient := github.NewClient(nil).WithAuthToken(
@@ -282,28 +276,12 @@ func createClients(app_id int) error {
 		)
 		if apiClient == nil {
 			log.Fatalf("failed to create new git client with token: %v\n", err)
-			return err
 		}
 
-		//append
-		result = append(result, apiClient)
-
-		// add to global map user => client
-		ClientMap[user_name] = apiClient
+		return apiClient, nil
 	}
 
-	// print clients map (not necessary and can be removed)
-	log.Println("clients created: ", result)
-	return nil //if not error then we
-}
-
-func getClientByRepoOwner(owner string) (*github.Client, error) {
-	client, ok := ClientMap[owner]
-	if ok {
-		return client, nil
-	}
 	return nil, fmt.Errorf("client not found for key: %s", owner)
-
 }
 
 func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
