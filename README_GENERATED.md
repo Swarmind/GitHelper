@@ -1,4 +1,4 @@
-## Package: main_test
+## Package: main
 
 This package contains a test function that demonstrates the usage of various components for retrieving and processing information from a vector store.
 

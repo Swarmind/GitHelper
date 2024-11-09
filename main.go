@@ -24,7 +24,7 @@ import (
 var AI string
 var API_TOKEN string
 var DB string
-var whiteList = []string{"GitjobTeam", "JackBekket"} //TODO: change it to load from .env / .yaml and not hardcoded
+var whiteList = []string{"GitjobTeam", "JackBekket","MoonSHRD"} //TODO: change it to load from .env / .yaml and not hardcoded
 var APP_ID = -1
 
 /*
