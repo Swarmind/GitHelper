@@ -84,7 +84,7 @@ require (
 )
 
 require (
-	github.com/JackBekket/hellper v0.0.0-20241001151518-a3b413ec5eaa
+	github.com/JackBekket/hellper v0.1.3
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/google/go-github/v62 v62.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
