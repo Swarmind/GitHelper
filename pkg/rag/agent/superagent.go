@@ -45,7 +45,7 @@ func CreateThread(prompt string, model openai.LLM, collection_name ...string) ([
 	if len(collection_name) >0 {
 	for _,cn := range collection_name {
 		collectionState := []llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeSystem, "Collection Name: " +cn),
+			llms.TextParts(llms.ChatMessageTypeSystem, "Available Collection Names: " +cn),
 		}
 		state = append(state,collectionState...)	
 	}

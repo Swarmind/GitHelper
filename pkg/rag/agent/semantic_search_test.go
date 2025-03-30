@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	//"github.com/tmc/langgraphgo/graph"
-	"github.com/JackBekket/hellper/lib/agent"
+	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
@@ -19,7 +19,7 @@ func Test_Search(t *testing.T) {
 	// Testing OnePunch semantic_search agent. it will stop when it finds the answer
 	log.Println("testing one-shot search")
 	model := createGenericLLM()
-	result1 := agent.OneShotRun("Call semanticSearch tool. Collection Name: 'Hellper' Query: How does embeddings package works?", model)
+	result1 := agent.OneShotRun("Call semanticSearch tool. Collection Name: 'Hellper' Query: How does agent package works?", model)
 	log.Println("OneShotAskRun", result1)
 }
 
@@ -96,10 +96,10 @@ func Test5Conversation(t *testing.T) {
 }
 
 func createGenericLLM() openai.LLM {
-	model_name := "tiger-gemma-9b-v1-i1" // should be settable?
+	model_name := "big-tiger-gemma-27b-v1" // should be settable?
 	_ = godotenv.Load()
-	baseURL := os.Getenv("AI_BASEURL") //TODO: should be global?
-	api_token := os.Getenv("ADNIN_KEY")
+	baseURL := os.Getenv("AI_URL") //TODO: should be global?
+	api_token := os.Getenv("API_TOKEN")
 	//db_link := os.Getenv("EMBEDDINGS_DB_URL")
 	model, err := openai.New(
 		openai.WithToken(api_token),

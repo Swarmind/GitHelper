@@ -8,7 +8,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
-	"github.com/JackBekket/hellper/lib/agent/tools"
+	"github.com/JackBekket/GitHelper/pkg/rag/agent/tools"
 	"github.com/JackBekket/langgraphgo/graph"
 )
 
