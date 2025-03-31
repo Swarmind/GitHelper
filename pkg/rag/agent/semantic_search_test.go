@@ -79,7 +79,7 @@ func Test5Conversation(t *testing.T) {
 	msg := agent.CreateMessageContentAi(result)
 	initialstate = append(initialstate, msg...)
 	//user_input2 := agent.CreateMessageContentHuman("How does local-ai package works? Collection Name: Hellper. Use semantic search.")
-	user_input2 := "How does local-ai package works? Collection Name: Hellper. Use semantic search."
+	user_input2 := "How does agent package works? Collection Name: Hellper. Use semantic search."
 	res2 := agent.OneShotRun(user_input2, model, initialstate...)
 	log.Println("Result 2nd turn:", res2)
 	user_input3 := "How does main package works? Collection Name: GitHelper. Use semantic search."
