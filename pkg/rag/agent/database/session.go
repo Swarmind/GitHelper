@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
@@ -11,13 +13,10 @@ import (
 type AiSession struct {
 	AIToken      string
 	Model     string
-	AuthMethod   int64
-	ProviderID   int64
 	DialogThread ChatSessionGraph
-	ProviderName string
-	BaseURL      string
-	Usage        map[string]int
 }
+
+
 
 // langgraph doesn't work with same types as langchain, so we have to improvise here.
 type ChatSessionGraph struct {
@@ -27,6 +26,19 @@ type ChatSessionGraph struct {
 }
 
 
+// check if collection is exist
+func (s *Service) CheckCollection(repo_name string) (bool) {
+    //var repoNameFromCollection sql.NullString
+    err := s.DBHandler.DB.QueryRow(`
+        SELECT name
+        FROM langchain_pg_collection
+        WHERE name = $1`, repo_name)
+    if err != nil {
+        return false
+    } else {
+		return true
+	}
+}
 
 
 
@@ -41,11 +53,44 @@ func (s *Service) CheckSession(userID int64) bool {
 	}
 }
 
+func (s *Service) CreateGHSession(issueID int8, repo_name string) error {
+	check := s.CheckCollection(repo_name)
+	if check == true{
+    res, err := s.DBHandler.DB.Exec("INSERT INTO gh_session (issue_id, repo_name) VALUES ($1, $2)", issueID, repo_name)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		return err
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	log.Printf("Query executed successfully. Rows affected: %d", rowsAffected)
+	return nil
+	} else {
+    e:= fmt.Sprintf(" collection does not exist")
+	return fmt.Errorf(e)
+	}
+}
+
+
+
+func (s *Service) CreateGHChatMessage(id int8, messageData string, createdAt time.Time) error {
+    _, err := s.DBHandler.DB.Exec("INSERT INTO gh_chat_messages (id, message_data, created_at) VALUES (?, ?, ?, ?)", id, messageData, createdAt)
+    if err != nil {
+        log.Printf("Error executing query: %v", err)
+        return err
+    }
+    return nil
+}
+
+
+
+
+
 func (s *Service) CreateAISession(userID int64, model string, providerID int64) error {
 	log.Info().Int64("userID", userID).Str("model", model).Int64("providerID", providerID).Msg("CreateLSession called")
 
 	res, err := s.DBHandler.DB.Exec(`
-		INSERT INTO ai_sessions (tg_user_id, model, endpoint)
+		INSERT INTO gh_sessions (tg_user_id, model, endpoint)
 		VALUES ($1, $2, $3)
 		ON CONFLICT(tg_user_id) DO UPDATE SET
 		model = $2
@@ -111,6 +156,9 @@ func (s *Service) GetAISession(userID int64) (AiSession, error) {
 
 	return session, nil
 }
+
+
+
 
 func (s *Service) UpdateModelInAISession(userID int64, model *string) error {
 	var modelValue interface{}
