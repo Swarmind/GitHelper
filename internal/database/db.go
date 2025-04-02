@@ -1,8 +1,41 @@
 package database
 
+// in this file all related to history
+
 import (
 	"github.com/tmc/langchaingo/llms"
 )
+
+// memory
+type AiSession struct {
+	AIToken      string
+	Model     string
+	DialogThread ChatSessionGraph
+}
+
+
+
+// langgraph doesn't work with same types as langchain, so we have to improvise here.
+type ChatSessionGraph struct {
+	ConversationBuffer []llms.MessageContent
+	//DialogThread string
+
+}
+
+
+// check if collection is exist
+func (s *Service) CheckCollection(repo_name string) (bool) {
+    //var repoNameFromCollection sql.NullString
+    err := s.DBHandler.DB.QueryRow(`
+        SELECT name
+        FROM langchain_pg_collection
+        WHERE name = $1`, repo_name)
+    if err != nil {
+        return false
+    } else {
+		return true
+	}
+}
 
 func (s *Service) CreateTables() error {
 	_, err := s.DBHandler.DB.Exec(`
@@ -115,3 +148,7 @@ func (s *Service) UpdateHistory(
         `, issueId, repoName, model, contentBytes)
 	return err
 }
+
+
+
+
