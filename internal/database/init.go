@@ -16,8 +16,8 @@ func NewHandler(connectionString string) (*Handler, error) {
 		return nil, err
 	}
 
-	service := Handler{
+	handler := Handler{
 		DB: db,
 	}
-	return &service, nil
+	return &handler, nil
 }
