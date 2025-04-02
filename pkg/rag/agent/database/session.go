@@ -1,7 +1,6 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -42,6 +41,7 @@ func (s *Service) CheckCollection(repo_name string) (bool) {
 
 
 
+/*
 // check if session exists
 func (s *Service) CheckSession(userID int64) bool {
 	_, err := s.GetAISession(userID)
@@ -52,6 +52,7 @@ func (s *Service) CheckSession(userID int64) bool {
 		return true
 	}
 }
+	*/
 
 func (s *Service) CreateGHSession(issueID int8, repo_name string) error {
 	check := s.CheckCollection(repo_name)
@@ -74,48 +75,27 @@ func (s *Service) CreateGHSession(issueID int8, repo_name string) error {
 
 
 func (s *Service) CreateGHChatMessage(id int8, messageData string, createdAt time.Time) error {
-    _, err := s.DBHandler.DB.Exec("INSERT INTO gh_chat_messages (id, message_data, created_at) VALUES (?, ?, ?, ?)", id, messageData, createdAt)
+    res, err := s.DBHandler.DB.Exec("INSERT INTO gh_chat_messages (id, message_data, created_at) VALUES ($1, $2, $3)", id, messageData, createdAt)
     if err != nil {
         log.Printf("Error executing query: %v", err)
         return err
     }
+	rowsAffected, _ := res.RowsAffected()
+	log.Printf("Query executed successfully. Rows affected: %d", rowsAffected)
     return nil
 }
 
 
-
-
-
-func (s *Service) CreateAISession(userID int64, model string, providerID int64) error {
-	log.Info().Int64("userID", userID).Str("model", model).Int64("providerID", providerID).Msg("CreateLSession called")
-
-	res, err := s.DBHandler.DB.Exec(`
-		INSERT INTO gh_sessions (tg_user_id, model, endpoint)
-		VALUES ($1, $2, $3)
-		ON CONFLICT(tg_user_id) DO UPDATE SET
-		model = $2
-		RETURNING tg_user_id
-	`, userID, model, providerID)
-
-	if err != nil {
-		log.Printf("Error executing query: %v", err)
-		return err
-	}
-
-	rowsAffected, _ := res.RowsAffected()
-	log.Printf("Query executed successfully. Rows affected: %d", rowsAffected)
-
-	return nil
-}
-
-func (s *Service) DeleteAISession(userID int64) error {
+func (s *Service) DeleteAISession(issueID int8) error {
 	_, err := s.DBHandler.DB.Exec(`
-    DELETE FROM ai_sessions
-    WHERE tg_user_id = $1
-    `, userID)
+    DELETE FROM gh_sessions
+    WHERE issue_id = $1
+    `, issueID)
 	return err
 }
 
+
+/*
 func (s *Service) GetAISession(userID int64) (AiSession, error) {
 	var (
 		model, endpointName, endpointURL sql.NullString
@@ -143,7 +123,7 @@ func (s *Service) GetAISession(userID int64) (AiSession, error) {
 		session.Model = model.String
 	}
 
-	/*
+	
 	if endpointId.Valid && endpointName.Valid && endpointURL.Valid && endpointAuthMethod.Valid {
 		session.AIProvider = &Endpoint{
 			ID:         endpointId.Int64,
@@ -152,11 +132,11 @@ func (s *Service) GetAISession(userID int64) (AiSession, error) {
 			AuthMethod: endpointAuthMethod.Int64,
 		}
 	}
-	*/
+	
 
 	return session, nil
 }
-
+*/
 
 
 
