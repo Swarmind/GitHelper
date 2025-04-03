@@ -5,16 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+
+	//"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/JackBekket/GitHelper/internal/database"
 	reflexia "github.com/JackBekket/GitHelper/internal/reflexia_integration"
 	RAG "github.com/JackBekket/GitHelper/pkg/rag"
+	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	embd "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/google/go-github/v65/github"
 	"github.com/joho/godotenv"
@@ -26,6 +31,7 @@ var API_TOKEN string
 var DB string
 var whiteList = []string{"GitjobTeam", "JackBekket", "MoonSHRD"} //TODO: change it to load from .env / .yaml and not hardcoded
 var APP_ID = -1
+var DB_SERVICE database.Service
 
 /*
 This is github application, which handle updates from github
@@ -51,10 +57,26 @@ func main() {
 	API_TOKEN = apit
 	DB = db_link
 
+	dbHandler, err := database.NewHandler(db_link)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create database service")
+	}
+
+	if err := dbHandler.DB.Ping(); err != nil {
+		log.Fatal().Err(err).Msg("failed to ping database")
+	}
+	log.Info().Msg("database ping successful")
+
+	db_service, err := database.NewAIService(dbHandler)
+	if err != nil {
+		log.Fatal().Err(err).Msg("something wrong")
+	}
+	DB_SERVICE = *db_service
+
 	// ... (Set up your webhook endpoint and start the server)
 	http.HandleFunc("/webhook", handleWebhook)
 	//log.Fatal(http.ListenAndServe(":8086", nil))
-	log.Fatal(http.ListenAndServe(":8186", nil))
+	log.Err(http.ListenAndServe(":8186", nil))
 }
 
 /*
@@ -109,7 +131,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			//
 			client, err := getClientByRepoOwner(repoOwner)
 			if err != nil {
-				log.Println(err)
+				log.Print(err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -117,8 +139,8 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			// Respond to the issue
 			response, err := generateResponse(issueBody, repoName)
 			if err != nil {
-				log.Println("Can't generate response")
-				log.Println(err)
+				log.Print("Can't generate response")
+				log.Print(err)
 				response = "Can't generate response bleep-bloop"
 			}
 			fmt.Println("response generated")
@@ -133,7 +155,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		owner_name := event.Repo.Owner.Login
-		log.Println("owner of repo: ", *owner_name)
+		log.Print("owner of repo: ", *owner_name)
 		check := checkWhitelist(*owner_name)
 		if !check {
 			http.Error(w, fmt.Sprintf("Error user (owner) is not in the whitelist: %v", err), http.StatusBadRequest)
@@ -141,9 +163,9 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ref := event.Ref
-		log.Println("ref branch of push: ", *ref)
+		log.Print("ref branch of push: ", *ref)
 		repo := event.Repo.Name
-		log.Println("push into repo name: ", *repo)
+		log.Print("push into repo name: ", *repo)
 		if *ref == "refs/heads/master" || *ref == "refs/heads/main" {
 			repoURL := fmt.Sprintf("https://github.com/%s/%s", *owner_name, *repo)
 
@@ -155,7 +177,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Println(err)
 			}
-			log.Println("push to master or main branch of a repo")
+			log.Print("push to master or main branch of a repo")
 		}
 	default:
 		http.Error(w, "Unknown event type received", http.StatusBadRequest)
@@ -172,16 +194,46 @@ func checkWhitelist(owner_name string) bool {
 	}
 }
 
+
+// if issue just opened we creating agent and generating response
+func createResponse(prompt string, namespace string) (string, error) {
+	_, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
+	if err != nil {
+		log.Print(err)
+		return "error",err
+	}
+
+	fmt.Println("namespace is: ", namespace)
+
+	model := os.Getenv("MODEL")
+
+	//response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection) // call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
+	dialog_graph,response, err := agent.RunNewAgent(API_TOKEN,model,AI,prompt,namespace)
+	if err != nil {
+		return "", err
+	}
+	return response, nil
+}
+
+
+func updateHistoryDb(dialog_stack *database.ChatSessionGraph) {
+	
+}
+
+
+// OBSOLETE
 // Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
 func generateResponse(prompt string, namespace string) (string, error) {
 	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
-		log.Println(err)
+		log.Print(err)
+		return "error",err
 	}
 
 	fmt.Println("namespace is: ", namespace)
 
 	// join doc and code docs, two of each
+
 	response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection) // call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
 	if err != nil {
 		return "", err
@@ -216,7 +268,7 @@ func getClientByRepoOwner(owner string) (*github.Client, error) {
 
 	itr, err := ghinstallation.NewAppsTransportKeyFromFile(tr, int64(APP_ID), pkName)
 	if err != nil {
-		log.Fatal(err)
+		log.Err(err)
 	}
 
 	//create git client with app transport
@@ -228,17 +280,17 @@ func getClientByRepoOwner(owner string) (*github.Client, error) {
 	)
 
 	if client == nil {
-		log.Fatalf("failed to create git client for app: %v\n", err)
+		log.Print("failed to create git client for app: %v\n", err)
 	}
 
 	installations, _, err := client.Apps.ListInstallations(context.Background(), &github.ListOptions{})
 	if err != nil {
-		log.Fatalf("failed to list installations: %v\n", err)
+		log.Print("failed to list installations: %v\n", err)
 	}
 
 	for _, installation := range installations {
-		log.Println("installation : ", *installation)
-		log.Println("repository selection: ", *installation.RepositorySelection)
+		log.Print("installation : ", *installation)
+		log.Print("repository selection: ", *installation.RepositorySelection)
 	}
 
 	//capture our installationId for our app
@@ -249,9 +301,9 @@ func getClientByRepoOwner(owner string) (*github.Client, error) {
 
 		user := val.GetAccount()
 		username := user.GetLogin()
-		log.Println("installed by entity_name:", username) // repo owner (?)
+		log.Print("installed by entity_name:", username) // repo owner (?)
 		targetType := val.GetTargetType()
-		log.Println("target type: ", targetType)
+		log.Print("target type: ", targetType)
 
 		if username != owner {
 			continue
@@ -268,14 +320,14 @@ func getClientByRepoOwner(owner string) (*github.Client, error) {
 			installID,
 			&github.InstallationTokenOptions{})
 		if err != nil {
-			log.Fatalf("failed to create installation token: %v\n", err)
+			log.Print("failed to create installation token: %v\n", err)
 		}
 
 		apiClient := github.NewClient(nil).WithAuthToken(
 			token.GetToken(),
 		)
 		if apiClient == nil {
-			log.Fatalf("failed to create new git client with token: %v\n", err)
+			log.Print("failed to create new git client with token: %v\n", err)
 		}
 
 		return apiClient, nil

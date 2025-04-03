@@ -22,6 +22,16 @@ type ChatSessionGraph struct {
 
 }
 
+func NewChatSessionGraph(buffer []llms.MessageContent) *ChatSessionGraph {
+	return &ChatSessionGraph{
+		ConversationBuffer: buffer,
+	}
+}
+
+func (s *ChatSessionGraph) ClearBuffer() {
+	s.ConversationBuffer = nil
+}
+
 
 // check if collection is exist
 func (s *Service) CheckCollection(repo_name string) (bool) {

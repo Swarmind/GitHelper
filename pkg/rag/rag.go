@@ -1,5 +1,6 @@
 package rag
 
+//	OBSOLETE
 import (
 	"context"
 	"fmt"

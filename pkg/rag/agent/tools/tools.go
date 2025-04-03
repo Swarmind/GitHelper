@@ -107,7 +107,7 @@ func (s *SemanticSearchTool) Execute(ctx context.Context, state []llms.MessageCo
 
 			log.Println("store:", store) // actually return empty store in case of error (!)
 
-			maxResults := 1 // Set your desired maxResults here
+			maxResults := 2 // Set your desired maxResults here
 			//options := args.Options // Pass in any additional options as needed
 
 			// Call *real* SemanticSearch function

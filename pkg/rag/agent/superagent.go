@@ -4,6 +4,7 @@ package agent
 import (
 	"log"
 
+	"github.com/JackBekket/GitHelper/internal/database"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
@@ -87,4 +88,79 @@ func CreateGenericLLM(model, baseURL, localAIToken string) openai.LLM {
 		log.Fatal(err)
 	}
 	return *modelLLM
+}
+
+
+func RunNewAgent(aiToken string, model string, baseURL string, prompt string, collection_name ...string) (*database.ChatSessionGraph, string, error) {
+	//cb := &ChainCallbackHandler{}
+
+	if baseURL == "" {
+		llm, err := openai.New(
+			openai.WithToken(aiToken),
+			openai.WithModel(model),
+			//openai.WithCallback(cb),
+		)
+		if err != nil {
+			return nil, "error", err
+		}
+		dialogState, outputText := CreateThread(prompt,*llm,collection_name...)
+		//last_msg := dialogState[len(dialogState)-1]
+
+		return &database.ChatSessionGraph{
+			ConversationBuffer: dialogState,
+		}, outputText, nil
+	} else {
+		llm, err := openai.New(
+			openai.WithToken(aiToken),
+			openai.WithModel(model),
+			openai.WithBaseURL(baseURL),
+			openai.WithAPIVersion("v1"),
+			//openai.WithCallback(cb),
+		)
+		if err != nil {
+			return nil, "error", err
+		}
+
+		dialogState, outputText := RunThread(prompt, *llm)
+		return &database.ChatSessionGraph{
+			ConversationBuffer: dialogState,
+		}, outputText, nil
+	}
+}
+
+func ContinueAgent(aiToken string, model string, baseURL string, prompt string, state *database.ChatSessionGraph) (*database.ChatSessionGraph, string, error) {
+	//cb := &ChainCallbackHandler{}
+
+	if baseURL == "" {
+		llm, err := openai.New(
+			openai.WithToken(aiToken),
+			openai.WithModel(model),
+			//openai.WithCallback(cb),
+		)
+		if err != nil {
+			return nil, "error", err
+		}
+		dialogState, outputText := RunThread(prompt, *llm, state.ConversationBuffer...)
+
+		return &database.ChatSessionGraph{
+			ConversationBuffer: dialogState,
+		}, outputText, nil
+	} else {
+		llm, err := openai.New(
+			openai.WithToken(aiToken),
+			openai.WithModel(model),
+			//openai.WithBaseURL("http://localhost:8080"),
+			openai.WithBaseURL(baseURL),
+			openai.WithAPIVersion("v1"),
+			//openai.WithCallback(cb),
+		)
+		if err != nil {
+			return nil, "error", err
+		}
+
+		dialogState, outputText := RunThread(prompt, *llm, state.ConversationBuffer...)
+		return &database.ChatSessionGraph{
+			ConversationBuffer: dialogState,
+		}, outputText, nil
+	}
 }
