@@ -129,7 +129,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Issue body is: ", issueBody)
 
 			//
-			client, err := getClientByRepoOwner(repoOwner)
+			client, err := GetClientByRepoOwner(repoOwner)
 			if err != nil {
 				log.Print(err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -165,7 +165,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			commentUser := comment.User
 			author := commentUser.Name
 
-			client, err := getClientByRepoOwner(repoOwner)
+			client, err := GetClientByRepoOwner(repoOwner)
 			if err != nil {
 				log.Print(err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -308,7 +308,7 @@ func genResponse(issue_id int, prompt string, namespace string) (string, error) 
 
 }
 
-// OBSOLETE
+// OBSOLETE, todo: delete this when prev. genResponse is tested 
 // Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
 func generateResponse(prompt string, namespace string) (string, error) {
 	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
@@ -349,7 +349,7 @@ func respond(client *github.Client, owner string, repo string, id int64, respons
 
 }
 
-func getClientByRepoOwner(owner string) (*github.Client, error) {
+func GetClientByRepoOwner(owner string) (*github.Client, error) {
 	tr := http.DefaultTransport
 	pkName := os.Getenv("PRIVATE_KEY_NAME")
 

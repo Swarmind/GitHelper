@@ -24,6 +24,9 @@ var NS string
 
 
 
+//TODO: use utils (pkg/github) funcs to create and comment issue
+
+
 
 // TODO: refactor it as outdated
 func Test_main (t *testing.T)   {
@@ -69,7 +72,7 @@ func getCollection(ai_url string, api_token string, db_link string, namespace st
 }
 
 
-
+// OBSOLETE
 func generateResponse(prompt string, namespace string) (string, error) {
 	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
