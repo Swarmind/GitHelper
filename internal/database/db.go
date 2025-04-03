@@ -9,11 +9,9 @@ import (
 // memory
 type AiSession struct {
 	AIToken      string
-	Model     string
+	Model        string
 	DialogThread ChatSessionGraph
 }
-
-
 
 // langgraph doesn't work with same types as langchain, so we have to improvise here.
 type ChatSessionGraph struct {
@@ -32,17 +30,16 @@ func (s *ChatSessionGraph) ClearBuffer() {
 	s.ConversationBuffer = nil
 }
 
-
 // check if collection is exist
-func (s *Service) CheckCollection(repo_name string) (bool) {
-    //var repoNameFromCollection sql.NullString
-    err := s.DBHandler.DB.QueryRow(`
+func (s *Service) CheckCollection(repoName string) bool {
+	//var repoNameFromCollection sql.NullString
+	err := s.DBHandler.DB.QueryRow(`
         SELECT name
         FROM langchain_pg_collection
-        WHERE name = $1`, repo_name)
-    if err != nil {
-        return false
-    } else {
+        WHERE name = $1`, repoName)
+	if err != nil {
+		return false
+	} else {
 		return true
 	}
 }
@@ -158,7 +155,3 @@ func (s *Service) UpdateHistory(
         `, issueId, repoName, model, contentBytes)
 	return err
 }
-
-
-
-

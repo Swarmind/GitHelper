@@ -137,7 +137,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Respond to the issue
-			response, err := createResponse(issueID,issueBody,repoName)
+			response, err := createResponse(issueID, issueBody, repoName)
 			if err != nil {
 				log.Print("Can't generate response")
 				log.Print(err)
@@ -162,25 +162,36 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 			comment := event.GetComment()
 			comment_body := comment.Body
-			user := comment.User
-			author := user.Name				
-			// TODO: add check that it is not OUR OWN bot answer!
+			commentUser := comment.User
+			author := commentUser.Name
 
-			fmt.Printf("Issue Comment:" + *comment_body)
-			fmt.Printf("Author: " + *author)
-			response,err := genResponse(issueID,*comment_body,repoName)
-			if err != nil {
-				log.Print("Can't generate response")
-				log.Print(err)
-				response = "Can't generate response bleep-bloop"
-			}
 			client, err := getClientByRepoOwner(repoOwner)
 			if err != nil {
 				log.Print(err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			respond(client,repoOwner,repoName,int64(issueID),response)
+
+			selfUser, _, err := client.Users.Get(context.Background(), "")
+			if err != nil {
+				log.Print(err)
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if selfUser.ID == commentUser.ID {
+				return
+			}
+
+			fmt.Printf("Issue Comment:" + *comment_body)
+			fmt.Printf("Author: " + *author)
+			response, err := genResponse(issueID, *comment_body, repoName)
+			if err != nil {
+				log.Print("Can't generate response")
+				log.Print(err)
+				response = "Can't generate response bleep-bloop"
+			}
+			respond(client, repoOwner, repoName, int64(issueID), response)
 		}
 	case "push":
 		event := new(github.PushEvent)
@@ -230,13 +241,12 @@ func checkWhitelist(owner_name string) bool {
 	}
 }
 
-
 // if issue just opened we creating agent and generating response
-func createResponse(issue_id int,prompt string, namespace string) (string, error) {
+func createResponse(issue_id int, prompt string, namespace string) (string, error) {
 	_, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Print(err)
-		return "error",err
+		return "error", err
 	}
 
 	fmt.Println("namespace is: ", namespace)
@@ -244,63 +254,59 @@ func createResponse(issue_id int,prompt string, namespace string) (string, error
 	model := os.Getenv("MODEL")
 
 	//response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection) // call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
-	dialog_graph,response, err := agent.RunNewAgent(API_TOKEN,model,AI,prompt,namespace)
+	dialog_graph, response, err := agent.RunNewAgent(API_TOKEN, model, AI, prompt, namespace)
 	if err != nil {
 		return "", err
 	}
-	err = updateHistoryDb(issue_id,namespace,model,dialog_graph)
+	err = updateHistoryDb(issue_id, namespace, model, dialog_graph)
 	if err != nil {
-		return "",err
+		return "", err
 	}
 	return response, nil
 }
 
-
-func updateHistoryDb(issue_id int,repo_name string,model_name string,dialog_stack *database.ChatSessionGraph) error{
+func updateHistoryDb(issue_id int, repo_name string, model_name string, dialog_stack *database.ChatSessionGraph) error {
 	buffer := dialog_stack.ConversationBuffer
 	last_msg := buffer[len(buffer)-1]
-	err :=DB_SERVICE.UpdateHistory(int64(issue_id),repo_name,model_name,last_msg)
+	err := DB_SERVICE.UpdateHistory(int64(issue_id), repo_name, model_name, last_msg)
 	if err != nil {
-		return  err
+		return err
 	}
 	return nil
 }
 
-
 // continue thread
-func genResponse(issue_id int,prompt string, namespace string) (string,error) {
+func genResponse(issue_id int, prompt string, namespace string) (string, error) {
 	_, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Print(err)
-		return "error",err
+		return "error", err
 	}
 
 	fmt.Println("namespace is: ", namespace)
 
 	model := os.Getenv("MODEL")
 
-	buffer, err := DB_SERVICE.GetHistory(int64(issue_id),namespace,model)
+	buffer, err := DB_SERVICE.GetHistory(int64(issue_id), namespace, model)
 	if err != nil {
 		log.Err(err)
 		return "", err
 	}
-	
+
 	dialog_state := database.NewChatSessionGraph(buffer)
 
 	//response, err := RAG.RagReflexia(prompt, AI, API_TOKEN, 2, collection) // call retrival-augmented generation with vectorstore of documents (with type:code and type:doc metadata of it). RAG package DO NOT handle any git operation, such as cloning and so on
-	dialog_graph,response, err := agent.ContinueAgent(API_TOKEN,model,AI,prompt,dialog_state)
+	dialog_graph, response, err := agent.ContinueAgent(API_TOKEN, model, AI, prompt, dialog_state)
 	if err != nil {
 		return "", err
 	}
-	err = updateHistoryDb(issue_id,namespace,model,dialog_graph)
+	err = updateHistoryDb(issue_id, namespace, model, dialog_graph)
 	if err != nil {
-		return "",err
+		return "", err
 	}
 	return response, nil
 
-
 }
-
 
 // OBSOLETE
 // Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
@@ -308,7 +314,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Print(err)
-		return "error",err
+		return "error", err
 	}
 
 	fmt.Println("namespace is: ", namespace)
