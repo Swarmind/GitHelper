@@ -146,6 +146,19 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("response generated")
 			respond(client, repoOwner, repoName, int64(issueID), response)
 		}
+		if event.GetAction() == "closed" {
+			repoOwner := event.GetRepo().GetOwner().GetLogin()
+			repoName := event.GetRepo().GetName()
+			issueID := event.GetIssue().GetNumber()
+			issueTitle := event.GetIssue().GetTitle()
+			//issueBody := event.GetIssue().GetBody()
+			fmt.Printf("Issue closed: %s/%s Issue: %d Title: %s\n", repoOwner, repoName, issueID, issueTitle)
+
+			fmt.Printf("Dropping thread")
+			model := os.Getenv("MODEL")
+			DB_SERVICE.DropHistory(int64(issueID),repoName,model)
+
+		}
 	case "issue_comment":
 		event := new(github.IssueCommentEvent)
 		err := json.Unmarshal(requestBody, event)

@@ -7,6 +7,8 @@ import (
 	"github.com/google/go-github/v62/github"
 )
 
+//TODO: add utils for Closing Issue
+
 func CreateIssue(client *github.Client, owner string, repo string, id int64,issue_title string ,content string) (*github.Issue,error){
 	ctx := context.Background()
 	issueRequest := &github.IssueRequest{

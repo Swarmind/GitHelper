@@ -25,6 +25,7 @@ var NS string
 
 
 //TODO: use utils (pkg/github) funcs to create and comment issue
+//TODO: add tests for creating, commenting and closing issue
 
 
 
