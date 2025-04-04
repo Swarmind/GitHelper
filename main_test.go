@@ -1,25 +1,16 @@
-package main_test
+package main
 
 import (
-	"context"
-	"fmt"
-	"log"
 	"os"
-	"strings"
 	"testing"
 
-	embd "github.com/JackBekket/hellper/lib/embeddings"
-	embeddings "github.com/JackBekket/hellper/lib/embeddings"
+	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	"github.com/joho/godotenv"
-	"github.com/tmc/langchaingo/chains"
-	"github.com/tmc/langchaingo/llms/openai"
-	"github.com/tmc/langchaingo/vectorstores"
 )
 
-
-var AI string
-var API_TOKEN string
-var DB string
+//var AI string
+//var API_TOKEN string
+//var DB string
 var NS string
 
 
@@ -49,68 +40,27 @@ func Test_main (t *testing.T)   {
 	AI = ai
 	API_TOKEN = apit
 	DB = db_link
-	NS = "gitjob-api"
+	//NS = "gitjob-api"
+	model := os.Getenv("MODEL")
 
 	repo_names = []string{"Hellper", "Reflexia"}
 	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "where is project config prompt loading happens?" }
 
 	//generateResponse(test_prompts[2],repo_names[2])
-
 	
-	for i := 0; i < 4; i++ {
-		generateResponse(test_prompts[i],repo_names[i])
+	
+	
+	for i := 0; i < 2; i++ {
+		//GenerateResponse(test_prompts[i],repo_names[i])
+		agent.RunNewAgent(API_TOKEN,model,AI,test_prompts[i],repo_names[i])
 	}
 		
 }
 
 
-func getCollection(ai_url string, api_token string, db_link string, namespace string) (vectorstores.VectorStore, error) {
-	store, err := embd.GetVectorStoreWithOptions(ai_url, api_token, db_link, namespace) // ai, api, db, namespace
-	if err != nil {
-		return nil, err
-	}
-	return store, nil
-}
 
 
-// OBSOLETE
-func generateResponse(prompt string, namespace string) (string, error) {
-	collection, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
-	if err != nil {
-		log.Println(err)
-	}
-	/* opts := vectorstores.WithFilters(map[string]string{
-		"type": "doc",
-	}) */
-
-		fmt.Println("namespace is: ", namespace)
-
-		//🤕🤕🤕
-		searchResults, err := embeddings.SemanticSearch(prompt, 2, collection)
-		if err != nil {
-			return "", err
-		}
-	
-		contextBuilder := strings.Builder{}
-		for _, doc := range searchResults {
-			contextBuilder.WriteString(doc.PageContent)
-			contextBuilder.WriteString("\n")
-		}
-		contexts := contextBuilder.String()
-	
-		fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, prompt)
-
-
-	
-	response, err := rag(prompt, AI, API_TOKEN, 1, collection)
-	if err != nil {
-		return "", err
-	}
-	return response, nil
-	
-}
-
-
+/*
 func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
 	//base_url := os.Getenv("AI_BASEURL")
 	base_url := ai_url
@@ -159,7 +109,7 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 
 	return result, nil
 }
-
+*/
 
 
 

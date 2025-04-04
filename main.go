@@ -136,7 +136,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Respond to the issue
-			response, err := createResponse(issueID, issueBody, repoName)
+			response, err := CreateResponse(issueID, issueBody, repoName)
 			if err != nil {
 				log.Print("Can't generate response")
 				log.Print(err)
@@ -190,7 +190,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 			fmt.Printf("Issue Comment:" + *comment_body)
 			fmt.Printf("Author: " + *author)
-			response, err := generateResponse(issueID, *comment_body, repoName)
+			response, err := GenerateResponse(issueID, *comment_body, repoName)
 			if err != nil {
 				log.Print("Can't generate response")
 				log.Print(err)
@@ -247,7 +247,7 @@ func checkWhitelist(owner_name string) bool {
 }
 
 // if issue just opened we creating agent and generating response
-func createResponse(issue_id int, prompt string, namespace string) (string, error) {
+func CreateResponse(issue_id int, prompt string, namespace string) (string, error) {
 	_, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Print(err)
@@ -281,7 +281,7 @@ func updateHistoryDb(issue_id int, repo_name string, model_name string, dialog_s
 }
 
 // continue thread
-func generateResponse(issue_id int, prompt string, namespace string) (string, error) {
+func GenerateResponse(issue_id int, prompt string, namespace string) (string, error) {
 	_, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Print(err)
@@ -375,12 +375,12 @@ func GetClientByRepoOwner(owner string) (*github.Client, *github.Installation, e
 	)
 
 	if client == nil {
-		log.Print("failed to create git client for app: %v\n", err)
+		log.Printf("failed to create git client for app: %v\n", err)
 	}
 
 	installations, _, err := client.Apps.ListInstallations(context.Background(), &github.ListOptions{})
 	if err != nil {
-		log.Print("failed to list installations: %v\n", err)
+		log.Printf("failed to list installations: %v\n", err)
 	}
 
 	for _, installation := range installations {
@@ -415,14 +415,14 @@ func GetClientByRepoOwner(owner string) (*github.Client, *github.Installation, e
 			installID,
 			&github.InstallationTokenOptions{})
 		if err != nil {
-			log.Print("failed to create installation token: %v\n", err)
+			log.Printf("failed to create installation token: %v\n", err)
 		}
 
 		apiClient := github.NewClient(nil).WithAuthToken(
 			token.GetToken(),
 		)
 		if apiClient == nil {
-			log.Print("failed to create new git client with token: %v\n", err)
+			log.Printf("failed to create new git client with token: %v\n", err)
 		}
 
 		return apiClient, val, nil

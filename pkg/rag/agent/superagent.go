@@ -121,7 +121,7 @@ func RunNewAgent(aiToken string, model string, baseURL string, prompt string, co
 			return nil, "error", err
 		}
 
-		dialogState, outputText := RunThread(prompt, *llm)
+		dialogState, outputText := CreateThread(prompt, *llm,collection_name...)
 		return &database.ChatSessionGraph{
 			ConversationBuffer: dialogState,
 		}, outputText, nil

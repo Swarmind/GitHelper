@@ -142,9 +142,11 @@ func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageCont
 	model := Model // global... should be .env or getting from user context I guess.
 	tools := Tools
 
+	/*
 	consideration_query := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "You are decision making agent, which can reply ONLY 'true' or 'false'.Your task is to determine whether or not to call semanticSearch function based on human input. If you see a basic question, return false. If user specified that he desires to use that function, return true. You should ONLY return 'true' or 'false'."),
 	}
+	*/
 
 	lastMsg := state[len(state)-1]
 	if lastMsg.Role == "tool" { // If we catch response from tool then it's second iteration and we simply need to give answer to user using this result
@@ -160,7 +162,10 @@ func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageCont
 	} else { // If it is not tool response
 
 		if lastMsg.Role == "human" { //                                            any user request
-			//state
+			
+
+			// this is consideration stack, it should be placed as separate node.
+			/*
 			consideration_stack := append(consideration_query, lastMsg)
 			//consideration_stack := append(consideration_query, state...)  // this is appending current state, but we actually need only last message here.
 			check, err := model.GenerateContent(ctx, consideration_stack) // one punch which determine wheter or not call tools. this is hardcode and probably should be separate part of the graph.
@@ -169,8 +174,8 @@ func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageCont
 			}
 			check_txt := fmt.Sprintf(check.Choices[0].Content)
 			log.Println("check result: ", check_txt)
-
-			if check_txt == "true" { // tool call required by one-shot agent
+			*/
+		//	if check_txt == "true" { // tool call required by one-shot agent
 				state = append(state, agentState...)
 				state = append(state, lastMsg)
 				response, err := model.GenerateContent(ctx, state, llms.WithTools(tools)) // AI call tool function.. in this step it just put call in messages stack
@@ -188,6 +193,7 @@ func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageCont
 					state = append(state, msg)
 					return state, nil
 				}
+			/*
 			} else { // proceed without tools
 				response, err := model.GenerateContent(ctx, state)
 				if err != nil {
@@ -197,6 +203,7 @@ func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageCont
 				state = append(state, msg)
 				return state, nil
 			}
+			*/
 		} // end if human
 		return state, nil
 	} // end if not tool response
