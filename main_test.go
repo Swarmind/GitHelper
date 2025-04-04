@@ -5,27 +5,15 @@ import (
 	"testing"
 
 	"github.com/JackBekket/GitHelper/pkg/rag/agent"
-	"github.com/joho/godotenv"
 )
 
-//var AI string
-//var API_TOKEN string
-//var DB string
 var NS string
-
-
 
 //TODO: use utils (pkg/github) funcs to create and comment issue
 //TODO: add tests for creating, commenting and closing issue
 
-
-
 // TODO: refactor it as outdated
-func Test_main (t *testing.T)   {
-
-
-	_ = godotenv.Load()
-
+func Test_main(t *testing.T) {
 
 	//Test getting vectorstore from .env
 	// In production name should be replaced by event value
@@ -44,21 +32,16 @@ func Test_main (t *testing.T)   {
 	model := os.Getenv("MODEL")
 
 	repo_names = []string{"Hellper", "Reflexia"}
-	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "where is project config prompt loading happens?" }
+	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "where is project config prompt loading happens?"}
 
 	//generateResponse(test_prompts[2],repo_names[2])
-	
-	
-	
+
 	for i := 0; i < 2; i++ {
 		//GenerateResponse(test_prompts[i],repo_names[i])
-		agent.RunNewAgent(API_TOKEN,model,AI,test_prompts[i],repo_names[i])
+		agent.RunNewAgent(API_TOKEN, model, AI, test_prompts[i], repo_names[i])
 	}
-		
+
 }
-
-
-
 
 /*
 func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
@@ -110,6 +93,3 @@ func rag(question string, ai_url string, api_token string, numOfResults int, sto
 	return result, nil
 }
 */
-
-
-

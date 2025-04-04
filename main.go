@@ -173,9 +173,9 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("New comment on issue: %s/%s Issue: %d Title: %s\n", repoOwner, repoName, issueID, issueTitle)
 
 			comment := event.GetComment()
-			comment_body := comment.Body
-			commentUser := comment.User
-			author := commentUser.Login
+			commentBody := comment.GetBody()
+			commentUser := comment.GetUser()
+			author := commentUser.GetLogin()
 
 			client, installation, err := GetClientByRepoOwner(repoOwner)
 			if err != nil {
@@ -188,9 +188,9 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			fmt.Printf("Issue Comment:" + *comment_body)
-			fmt.Printf("Author: " + *author)
-			response, err := GenerateResponse(issueID, *comment_body, repoName)
+			fmt.Printf("Issue Comment: %s\n", commentBody)
+			fmt.Printf("Author: %s\n", author)
+			response, err := GenerateResponse(issueID, commentBody, repoName)
 			if err != nil {
 				log.Print("Can't generate response")
 				log.Print(err)
@@ -313,7 +313,6 @@ func GenerateResponse(issue_id int, prompt string, namespace string) (string, er
 
 }
 
-
 /*
 // OBSOLETE, todo: delete this when prev. genResponse is tested
 // Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
@@ -334,7 +333,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	}
 	return response, nil
 }
-	*/
+*/
 
 func respond(client *github.Client, owner string, repo string, id int64, response string) {
 	ctx := context.Background()
