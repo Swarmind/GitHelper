@@ -51,8 +51,8 @@ func Test_main (t *testing.T)   {
 	DB = db_link
 	NS = "gitjob-api"
 
-	repo_names = []string{"Hellper","gitjob_lk","gitjob-api", "Reflexia"}
-	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "explain how Task API works", "in what file is located scheduler API?", "where is project config prompt loading happens?" }
+	repo_names = []string{"Hellper", "Reflexia"}
+	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "where is project config prompt loading happens?" }
 
 	//generateResponse(test_prompts[2],repo_names[2])
 

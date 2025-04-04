@@ -14,7 +14,6 @@ import (
 
 	"github.com/JackBekket/GitHelper/internal/database"
 	reflexia "github.com/JackBekket/GitHelper/internal/reflexia_integration"
-	RAG "github.com/JackBekket/GitHelper/pkg/rag"
 	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	embd "github.com/JackBekket/hellper/lib/embeddings"
 	ghinstallation "github.com/bradleyfalzon/ghinstallation/v2"
@@ -191,7 +190,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 			fmt.Printf("Issue Comment:" + *comment_body)
 			fmt.Printf("Author: " + *author)
-			response, err := genResponse(issueID, *comment_body, repoName)
+			response, err := generateResponse(issueID, *comment_body, repoName)
 			if err != nil {
 				log.Print("Can't generate response")
 				log.Print(err)
@@ -282,7 +281,7 @@ func updateHistoryDb(issue_id int, repo_name string, model_name string, dialog_s
 }
 
 // continue thread
-func genResponse(issue_id int, prompt string, namespace string) (string, error) {
+func generateResponse(issue_id int, prompt string, namespace string) (string, error) {
 	_, err := getCollection(AI, API_TOKEN, DB, namespace) // getting all docs from (whole collection) for namespace (repo_name)
 	if err != nil {
 		log.Print(err)
@@ -314,6 +313,8 @@ func genResponse(issue_id int, prompt string, namespace string) (string, error) 
 
 }
 
+
+/*
 // OBSOLETE, todo: delete this when prev. genResponse is tested
 // Generates retrival-augmented generation taking issue body as prompt, generating response and post it as a comment to github issue
 func generateResponse(prompt string, namespace string) (string, error) {
@@ -333,6 +334,7 @@ func generateResponse(prompt string, namespace string) (string, error) {
 	}
 	return response, nil
 }
+	*/
 
 func respond(client *github.Client, owner string, repo string, id int64, response string) {
 	ctx := context.Background()
