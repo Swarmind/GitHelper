@@ -2,6 +2,7 @@
 package agent
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/JackBekket/GitHelper/internal/database"
@@ -36,23 +37,31 @@ func RunThread(prompt string, model openai.LLM, history ...llms.MessageContent) 
 	}
 }
 
-func CreateThread(prompt string, model openai.LLM, collection_name ...string) ([]llms.MessageContent, string) {
-	call := OneShotRun(prompt, model)
+func CreateThread(prompt string, model openai.LLM, collectionName ...string) ([]llms.MessageContent, string) {
+	historyState := []llms.MessageContent{}
+	if len(collectionName) > 0 {
+		msg := "Available Collection Names:\n"
+		for _, cn := range collectionName {
+			msg += fmt.Sprintf("%s\n", cn)
+		}
+		historyState = append(historyState, llms.MessageContent{
+			Role: llms.ChatMessageTypeSystem,
+			Parts: []llms.ContentPart{
+				llms.TextPart(msg),
+			},
+		})
+	}
+
+	call := OneShotRun(prompt, model, historyState...)
 	log.Println(call)
+
+	promptRequest := CreateMessageContentHuman(prompt)
 	lastResponse := CreateMessageContentAi(call)
 
-	user_msg := CreateMessageContentHuman(prompt)
-	state := user_msg
-	if len(collection_name) >0 {
-	for _,cn := range collection_name {
-		collectionState := []llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeSystem, "Available Collection Names: " +cn),
-		}
-		state = append(state,collectionState...)	
-	}
-	}
-		state = append(state, lastResponse...)
-		return state, call
+	historyState = append(historyState, promptRequest...)
+	historyState = append(historyState, lastResponse...)
+
+	return historyState, call
 }
 
 func CreateMessageContentAi(content string) []llms.MessageContent {
@@ -90,7 +99,6 @@ func CreateGenericLLM(model, baseURL, localAIToken string) openai.LLM {
 	return *modelLLM
 }
 
-
 func RunNewAgent(aiToken string, model string, baseURL string, prompt string, collection_name ...string) (*database.ChatSessionGraph, string, error) {
 	//cb := &ChainCallbackHandler{}
 
@@ -103,7 +111,7 @@ func RunNewAgent(aiToken string, model string, baseURL string, prompt string, co
 		if err != nil {
 			return nil, "error", err
 		}
-		dialogState, outputText := CreateThread(prompt,*llm,collection_name...)
+		dialogState, outputText := CreateThread(prompt, *llm, collection_name...)
 		//last_msg := dialogState[len(dialogState)-1]
 
 		return &database.ChatSessionGraph{
@@ -121,7 +129,7 @@ func RunNewAgent(aiToken string, model string, baseURL string, prompt string, co
 			return nil, "error", err
 		}
 
-		dialogState, outputText := CreateThread(prompt, *llm,collection_name...)
+		dialogState, outputText := CreateThread(prompt, *llm, collection_name...)
 		return &database.ChatSessionGraph{
 			ConversationBuffer: dialogState,
 		}, outputText, nil

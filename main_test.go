@@ -2,9 +2,11 @@ package main
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/JackBekket/GitHelper/pkg/rag/agent"
+	"github.com/joho/godotenv"
 )
 
 var NS string
@@ -14,33 +16,37 @@ var NS string
 
 // TODO: refactor it as outdated
 func Test_main(t *testing.T) {
+	err := godotenv.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	//Test getting vectorstore from .env
 	// In production name should be replaced by event value
-	ai := os.Getenv("AI_ENDPOINT")
-	apit := os.Getenv("API_TOKEN")
-	db_link := os.Getenv("DB_URL")
-
-	// test data
-	var repo_names []string
-	var test_prompts []string
-
-	AI = ai
-	API_TOKEN = apit
-	DB = db_link
-	//NS = "gitjob-api"
+	baseURL := os.Getenv("AI_URL")
+	token := os.Getenv("API_TOKEN")
 	model := os.Getenv("MODEL")
 
-	repo_names = []string{"Hellper", "Reflexia"}
-	test_prompts = []string{"what is the logic of command package? what is the logic of dialog package?", "where is project config prompt loading happens?"}
-
-	//generateResponse(test_prompts[2],repo_names[2])
-
-	for i := 0; i < 2; i++ {
-		//GenerateResponse(test_prompts[i],repo_names[i])
-		agent.RunNewAgent(API_TOKEN, model, AI, test_prompts[i], repo_names[i])
+	for repo, prompts := range map[string][]string{
+		"Hellper": {
+			"what is the logic of command package?\nwhat is the logic of dialog package?",
+		},
+		"Reflexia": {
+			"where is project config prompt loading happens?",
+		},
+	} {
+		for _, prompt := range prompts {
+			_, resp, err := agent.RunNewAgent(token, model, baseURL, prompt, repo)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.TrimSpace(resp) == "" {
+				t.Fail()
+				continue
+			}
+			t.Logf("Request: %s\nResponse: %s", prompt, resp)
+		}
 	}
-
 }
 
 /*

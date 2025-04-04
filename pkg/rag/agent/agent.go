@@ -43,41 +43,40 @@ import (
 var Model openai.LLM
 var Tools []llms.Tool
 
-
 // This is the main function for this package
-func OneShotRun(prompt string, model openai.LLM, history_state ...llms.MessageContent) string {
+func OneShotRun(prompt string, model openai.LLM, historyState ...llms.MessageContent) string {
 
 	// Operation with message STATE stack
 	agentState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "You are helpful agent that has access to a semanticSearch tool. Use this tool if user ask to retrive some information from database/collection to provide user with information he/she looking for."),
 	}
-	intialState := []llms.MessageContent{
+	initialState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "Below a current conversation between user and helpful AI assistant. You (assistant) should help user in any task he/she ask you to do."),
 	}
 
-	if len(history_state) > 0 { // if there are previouse message state then we first load it into message state
+	if len(historyState) > 0 { // if there are previouse message state then we first load it into message state
 		// Access the first element of the slice
-		history := history_state
 		// ... use the history variable as needed
-			intialState = append(intialState, history...) // load history as initial state
-		intialState = append(
-			intialState,
+		initialState = append(initialState, historyState...) // load history as initial state
+		initialState = append(
+			initialState,
 			agentState..., // append agent system prompt
 		)
-		intialState = append(
-			intialState,
+		initialState = append(
+			initialState,
 			llms.TextParts(llms.ChatMessageTypeHuman, prompt), //append user input (!)
 		)
 	} else {
-		//intialState = agentState    //history is empty -- load agentState as initial_state and append user prompt
-		intialState = append(
-			intialState,
+		initialState = append(
+			initialState,
+			agentState...,
+		)
+		initialState = append(initialState,
 			llms.TextParts(llms.ChatMessageTypeHuman, prompt),
 		)
-
 	}
 
-	Tools,_ = tools.GetTools()
+	Tools, _ = tools.GetTools()
 
 	//Tools = tools
 	Model = model
@@ -98,17 +97,16 @@ func OneShotRun(prompt string, model openai.LLM, history_state ...llms.MessageCo
 		return fmt.Sprintf("error :%v", err)
 	}
 
-	response, err := app.Invoke(context.Background(), intialState)
+	response, err := app.Invoke(context.Background(), initialState)
 	if err != nil {
 		log.Printf("error: %v", err)
 		return fmt.Sprintf("error :%v", err)
 	}
 
 	lastMsg := response[len(response)-1]
-	log.Printf("last msg: %v", lastMsg.Parts[0])
 	result := lastMsg.Parts[0]
-	result_str := fmt.Sprintf("%v", result)
-	return result_str
+	resultStr := fmt.Sprintf("%v", result)
+	return resultStr
 }
 
 // AGENT NODE
@@ -121,31 +119,27 @@ func OneShotRun(prompt string, model openai.LLM, history_state ...llms.MessageCo
 */
 func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
 
-	
-
 	agentState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "You are helpful agent that has access to a semanticSearch tool. Use this tool if user ask to retrive some information from database/collection to provide user with information he/she looking for."),
 	}
 
-	/*	
-	for _,cn := range collection_name {
-		collectionState := []llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeSystem, "Collection Name: " +cn),
+	/*
+		for _,cn := range collection_name {
+			collectionState := []llms.MessageContent{
+				llms.TextParts(llms.ChatMessageTypeSystem, "Collection Name: " +cn),
+			}
+			state := append(agentState,collectionState...)
+			agentState = state
 		}
-		state := append(agentState,collectionState...)
-		agentState = state
-	}
 	*/
-
-
 
 	model := Model // global... should be .env or getting from user context I guess.
 	tools := Tools
 
 	/*
-	consideration_query := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, "You are decision making agent, which can reply ONLY 'true' or 'false'.Your task is to determine whether or not to call semanticSearch function based on human input. If you see a basic question, return false. If user specified that he desires to use that function, return true. You should ONLY return 'true' or 'false'."),
-	}
+		consideration_query := []llms.MessageContent{
+			llms.TextParts(llms.ChatMessageTypeSystem, "You are decision making agent, which can reply ONLY 'true' or 'false'.Your task is to determine whether or not to call semanticSearch function based on human input. If you see a basic question, return false. If user specified that he desires to use that function, return true. You should ONLY return 'true' or 'false'."),
+		}
 	*/
 
 	lastMsg := state[len(state)-1]
@@ -162,47 +156,46 @@ func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageCont
 	} else { // If it is not tool response
 
 		if lastMsg.Role == "human" { //                                            any user request
-			
 
 			// this is consideration stack, it should be placed as separate node.
 			/*
-			consideration_stack := append(consideration_query, lastMsg)
-			//consideration_stack := append(consideration_query, state...)  // this is appending current state, but we actually need only last message here.
-			check, err := model.GenerateContent(ctx, consideration_stack) // one punch which determine wheter or not call tools. this is hardcode and probably should be separate part of the graph.
+				consideration_stack := append(consideration_query, lastMsg)
+				//consideration_stack := append(consideration_query, state...)  // this is appending current state, but we actually need only last message here.
+				check, err := model.GenerateContent(ctx, consideration_stack) // one punch which determine wheter or not call tools. this is hardcode and probably should be separate part of the graph.
+				if err != nil {
+					return state, err
+				}
+				check_txt := fmt.Sprintf(check.Choices[0].Content)
+				log.Println("check result: ", check_txt)
+			*/
+			//	if check_txt == "true" { // tool call required by one-shot agent
+			state = append(state, agentState...)
+			state = append(state, lastMsg)
+			response, err := model.GenerateContent(ctx, state, llms.WithTools(tools)) // AI call tool function.. in this step it just put call in messages stack
 			if err != nil {
 				return state, err
 			}
-			check_txt := fmt.Sprintf(check.Choices[0].Content)
-			log.Println("check result: ", check_txt)
-			*/
-		//	if check_txt == "true" { // tool call required by one-shot agent
-				state = append(state, agentState...)
-				state = append(state, lastMsg)
-				response, err := model.GenerateContent(ctx, state, llms.WithTools(tools)) // AI call tool function.. in this step it just put call in messages stack
-				if err != nil {
-					return state, err
-				}
-				msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
+			msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
 
-				if len(response.Choices[0].ToolCalls) > 0 {
-					for _, toolCall := range response.Choices[0].ToolCalls {
-						if toolCall.FunctionCall.Name == "semanticSearch" { // AI catch that there is a function call in messages, so *now* it actually calls the function.
-							msg.Parts = append(msg.Parts, toolCall) // Add result to messages stack
-						}
+			if len(response.Choices[0].ToolCalls) > 0 {
+				for _, toolCall := range response.Choices[0].ToolCalls {
+					if toolCall.FunctionCall.Name == "semanticSearch" { // AI catch that there is a function call in messages, so *now* it actually calls the function.
+						msg.Parts = append(msg.Parts, toolCall) // Add result to messages stack
 					}
-					state = append(state, msg)
-					return state, nil
 				}
-			/*
-			} else { // proceed without tools
-				response, err := model.GenerateContent(ctx, state)
-				if err != nil {
-					return state, err
-				}
-				msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
 				state = append(state, msg)
 				return state, nil
 			}
+			/*
+				} else { // proceed without tools
+					response, err := model.GenerateContent(ctx, state)
+					if err != nil {
+						return state, err
+					}
+					msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
+					state = append(state, msg)
+					return state, nil
+				}
 			*/
 		} // end if human
 		return state, nil
@@ -229,8 +222,8 @@ func semanticSearch(ctx context.Context, state []llms.MessageContent) ([]llms.Me
 	semanticSearchTool := tools.SemanticSearchTool{}
 	res, err := semanticSearchTool.Execute(ctx, state)
 	if err != nil {
-    // Handle the error
+		// Handle the error
 		return nil, err
 	}
-	return res,nil
+	return res, nil
 }
