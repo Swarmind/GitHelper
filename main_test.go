@@ -1,20 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/JackBekket/GitHelper/pkg/github"
 	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 )
 
 var NS string
 
-//TODO: use utils (pkg/github) funcs to create and comment issue
+
 //TODO: add tests for creating, commenting and closing issue
 
-// TODO: refactor it as outdated
+
 func Test_main(t *testing.T) {
 	err := godotenv.Load()
 	if err != nil {
@@ -49,53 +52,59 @@ func Test_main(t *testing.T) {
 	}
 }
 
-/*
-func rag(question string, ai_url string, api_token string, numOfResults int, store vectorstores.VectorStore) (result string, err error) {
-	//base_url := os.Getenv("AI_BASEURL")
-	base_url := ai_url
 
-	// Create an embeddings client using the specified API and embedding model
-	llm, err := openai.New(
-		openai.WithBaseURL(base_url),
-		openai.WithAPIVersion("v1"),
-		openai.WithToken(api_token),
-		openai.WithModel("tiger-gemma-9b-v1-i1"),
-		openai.WithEmbeddingModel("text-embedding-ada-002"),
-	)
+func Test_createIssue(t *testing.T) {
+
+	err := godotenv.Load()
 	if err != nil {
-		return "", err
+		t.Fatal(err)
 	}
+	repoOwner := "JackBekket"
+	repo := "GitHelper"
 
-	//🤕🤕🤕
-	searchResults, err := embeddings.SemanticSearch(question, numOfResults, store)
+	issue_title := "test"
+	content := "Hey, this is test issue. Explain me how main package works?"
+
+	client, _, err := GetClientByRepoOwner(repoOwner)
 	if err != nil {
-		return "", err
+		log.Print(err)
+		t.Fatal(err)
 	}
+	
+	//lastIssueId := ?		// we need to get last id? is it autoincrement?
 
-	contextBuilder := strings.Builder{}
-	for _, doc := range searchResults {
-		contextBuilder.WriteString(doc.PageContent)
-		contextBuilder.WriteString("\n")
-	}
-	contexts := contextBuilder.String()
-
-	fullPrompt := fmt.Sprintf("Context: %s\n\nQuestion: %s", contexts, question)
-
-	result, err = chains.Run(
-		context.Background(),
-		chains.NewRetrievalQAFromLLM(
-			llm,
-			vectorstores.ToRetriever(store, numOfResults),
-		),
-		fullPrompt,
-		chains.WithMaxTokens(8192),
-	)
+	issue,err :=github.CreateIssue(*client,repoOwner,repo,lastIssueId,issue_title,content)
 	if err != nil {
-		return "", err
+		t.Fatal(err)
 	}
+	fmt.Printf(issue)
 
-	fmt.Println("====final answer====\n", result)
-
-	return result, nil
 }
-*/
+
+
+func Test_commentIssue(t *testing.T,id int64) {
+
+	err := godotenv.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repoOwner := "JackBekket"
+	repo := "GitHelper"
+
+	content := "Hey, this is test comment."
+
+	client, _, err := GetClientByRepoOwner(repoOwner)
+	if err != nil {
+		log.Print(err)
+		t.Fatal(err)
+	}
+
+	issue,err :=github.CommentIssue(*client,repoOwner,repo,id,content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf(issue)
+
+
+}
+
