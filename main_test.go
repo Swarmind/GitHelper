@@ -1,24 +1,19 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/JackBekket/GitHelper/pkg/github"
+	githubAPI "github.com/JackBekket/GitHelper/pkg/github"
 	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
 )
 
-var NS string
-
-
-//TODO: add tests for creating, commenting and closing issue
-
-
-func Test_main(t *testing.T) {
+func TestAgent(t *testing.T) {
 	err := godotenv.Load()
 	if err != nil {
 		t.Fatal(err)
@@ -52,59 +47,54 @@ func Test_main(t *testing.T) {
 	}
 }
 
-
-func Test_createIssue(t *testing.T) {
-
+func TestGithubAPI(t *testing.T) {
 	err := godotenv.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	appIdStr := os.Getenv("APP_ID")
+	appId, err := strconv.ParseInt(appIdStr, 10, 64)
+	if err != nil {
+		log.Fatal().Err(err).Msg("parsing APP_ID env variable")
+	}
+	pkPath := os.Getenv("PRIVATE_KEY_NAME")
+	GHService := githubAPI.NewGHService(
+		appId, pkPath,
+		strings.Split(os.Getenv("OWNER_WHITELIST"), ","),
+	)
+
 	repoOwner := "JackBekket"
+
+	client, _, err := GHService.GetClientByRepoOwner(repoOwner)
+	if err != nil {
+		log.Print(err)
+		t.Fatal(err)
+	}
+
 	repo := "GitHelper"
 
 	issue_title := "test"
 	content := "Hey, this is test issue. Explain me how main package works?"
-
-	client, _, err := GetClientByRepoOwner(repoOwner)
-	if err != nil {
-		log.Print(err)
-		t.Fatal(err)
-	}
-	
-	//lastIssueId := ?		// we need to get last id? is it autoincrement?
-
-	issue,err :=github.CreateIssue(*client,repoOwner,repo,lastIssueId,issue_title,content)
+	issue, err := github.CreateIssue(t.Context(), client, repoOwner, repo, issue_title, content)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf(issue)
 
+	t.Logf("Issue: %+v", issue)
+
+	content = "this is a test comment"
+	comment, err := github.CommentIssue(t.Context(), client, repoOwner, repo, issue.GetNumber(), content)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Comment: %+v", comment)
+
+	issue, err = github.CloseIssue(t.Context(), client, repoOwner, repo, issue.GetNumber())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Closed issue: %+v", issue)
 }
-
-
-func Test_commentIssue(t *testing.T,id int64) {
-
-	err := godotenv.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	repoOwner := "JackBekket"
-	repo := "GitHelper"
-
-	content := "Hey, this is test comment."
-
-	client, _, err := GetClientByRepoOwner(repoOwner)
-	if err != nil {
-		log.Print(err)
-		t.Fatal(err)
-	}
-
-	issue,err :=github.CommentIssue(*client,repoOwner,repo,id,content)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Printf(issue)
-
-
-}
-
