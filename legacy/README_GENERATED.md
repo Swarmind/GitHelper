@@ -1,33 +1,29 @@
-# rag
+## RAG
 
-This package provides a RAG (Retrieval Augmented Generation) system for generating responses to prompts based on a given set of documents. The system uses an AI endpoint, an API token, and a database to store and retrieve documents. The package includes several test functions that demonstrate how to use the RAG system with different options and configurations.
+This package provides a set of functions for performing Retrieval Augmented Generation (RAG) using various question answering chains. It leverages embeddings to retrieve relevant documents from a vector store and then uses these documents to generate answers to questions.
 
-## File Structure
-
+### File structure
 - rag.go
 - rag_test.go
-- pkg/rag/rag_test.go
 
-## Environment Variables
+### Code summary
+The package defines several functions for performing RAG:
 
-- AI_ENDPOINT: URL of the AI endpoint
-- API_TOKEN: API token for the AI endpoint
-- DB_URL: URL of the database
+- `RagReflexia`: This function takes a question, API URL, API token, number of results, and a vector store as input. It creates an embeddings client, retrieves documentation and code metadata based on the question, combines the metadata into a single input for the LLM, and uses the stuffed QA chain to generate an answer to the question.
 
-## Input Sources
+- `RagWithOptions`: This function is similar to `RagReflexia`, but it also takes additional options for the vector store.
 
-- test_prompts: An array of strings containing the prompts to be used in the tests.
-- repo_names: An array of strings containing the names of the repositories to be used in the tests.
+- `StuffedQA_Rag`: This function takes a question, API URL, API token, number of results, and a vector store as input. It creates an embeddings client, retrieves relevant documents from the vector store, and uses the stuffed QA chain to generate an answer to the question.
 
-## Major Code Parts
+- `RefinedQA_RAG`: This function takes a question, API URL, API token, number of results, and a vector store as input. It creates an embeddings client, retrieves relevant documents from the vector store, and uses the refine documents chain for question answering to generate an answer to the question.
 
-1. Test_RagWithFilteres: This test function calls RAG with optional filters. It loads the environment variables, initializes the AI, API token, and database URL, and then calls the RAG.RagWithOptions function with the test prompt, AI, API token, and the vector store.
+All these functions use the provided API URL and API token to create an embeddings client, which is then used to retrieve relevant documents from the vector store. The retrieved documents are then used to generate an answer to the question using the specified question answering chain.
 
-2. Test_RagReflexia: This test function calls RAG with two types of documents (docs and code) and calls the 'stuffed' method of RAG. It follows a similar process as Test_RagWithFilteres, but it calls the RAG.RagReflexia function instead of RAG.RagWithOptions.
+### Edge cases
+The application can be launched by importing the package and calling any of the functions mentioned above.
 
-3. Test_StuffRag: This test function tests the 'stuffed' method of RAG. It loads the environment variables, initializes the AI, API token, and database URL, and then calls the RAG.StuffedQA_Rag function with the test prompt, AI, API token, and the vector store.
+### Unclear places
+The package does not explicitly mention how the embeddings client is created or how the vector store is initialized. It assumes that these components are already set up and configured.
 
-4. Test_RefinedQA_RAG: This test function calls the Refined QA method of RAG. It follows a similar process as Test_StuffRag, but it calls the RAG.StuffedQA_Rag function instead of RAG.RagWithOptions.
-
-5. getCollection: This function takes the AI endpoint URL, API token, database URL, and namespace as input and returns a vector store. It uses the embeddings library to get the vector store with the specified options.
-
+### Dead code
+There is no apparent dead code in the package.
