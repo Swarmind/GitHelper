@@ -1,6 +1,6 @@
 module github.com/JackBekket/GitHelper
 
-go 1.23.1
+go 1.24.1
 
 require (
 	github.com/JackBekket/langgraphgo v0.0.0-20241122181505-95eaa98c53b0
@@ -9,6 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-github/v65 v65.0.0
 	github.com/joho/godotenv v1.5.1
+	github.com/rubenv/pgtest v1.1.0
 	github.com/tmc/langchaingo v0.1.12
 )
 
@@ -59,7 +60,6 @@ require (
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.7 // indirect
-	github.com/rubenv/pgtest v1.1.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
