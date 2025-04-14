@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	agent "github.com/JackBekket/GitHelper/pkg/agent/rag"
 	"github.com/JackBekket/GitHelper/pkg/github"
 	githubAPI "github.com/JackBekket/GitHelper/pkg/github"
-	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
 )
