@@ -9,12 +9,13 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 
 	"github.com/JackBekket/GitHelper/pkg/agent/rag/tools"
-	"github.com/JackBekket/langgraphgo/graph"
+	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 )
 
 // global var
 var Model openai.LLM
 var Tools []llms.Tool
+
 
 // This is the main function for this package
 func OneShotRun(prompt string, model openai.LLM, historyState ...llms.MessageContent) string {
@@ -81,7 +82,7 @@ Task: `
 	Model = model
 
 	// MAIN WORKFLOW
-	workflow := graph.NewMessageGraph()
+	workflow := graph.NewStateGraph()
 
 	workflow.AddNode("plan", getPlan)
 	workflow.AddNode("tool", tool_execution)
