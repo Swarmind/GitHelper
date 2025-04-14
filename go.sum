@@ -24,8 +24,8 @@ github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/JackBekket/hellper v0.1.7 h1:WUxdULwmrJEm8q7Z4SglNabjkkAE4lrvbUaJWcm7KJ4=
 github.com/JackBekket/hellper v0.1.7/go.mod h1:AmPSGT+YgF8D003D+V5n6T4Lb3JOiJ2I+yifzgrnyGY=
-github.com/JackBekket/langgraphgo v0.1.1 h1:NumFBv0ShAay+/PBXhSP9KI1EJ70VMqWQcZ3C3+yrHg=
-github.com/JackBekket/langgraphgo v0.1.1/go.mod h1:zgBzpBBR4/j5DvG8M4b/mFZsViRQ/oDVVXGhyvRPL54=
+github.com/JackBekket/langgraphgo v0.1.2 h1:5dtyzJOFKDInslr35ApaDnBs4ku8qoSeuCZqb0DN+XQ=
+github.com/JackBekket/langgraphgo v0.1.2/go.mod h1:zgBzpBBR4/j5DvG8M4b/mFZsViRQ/oDVVXGhyvRPL54=
 github.com/JackBekket/reflexia v0.1.2 h1:jSf86JrFPLNUNUfHrdu9o6qvFEgBy+ieHmsAGxQPRas=
 github.com/JackBekket/reflexia v0.1.2/go.mod h1:K90SrVVj4OyXHf18wzQuTwAH1cWdQMsk6FfAG5lgepU=
 github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
