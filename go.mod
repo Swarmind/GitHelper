@@ -3,7 +3,7 @@ module github.com/JackBekket/GitHelper
 go 1.24.1
 
 require (
-	github.com/JackBekket/langgraphgo v0.1.2
+	github.com/JackBekket/langgraphgo v0.1.3
 	github.com/JackBekket/reflexia v0.1.2
 	github.com/bradleyfalzon/ghinstallation/v2 v2.11.0
 	github.com/go-git/go-git/v5 v5.12.0
