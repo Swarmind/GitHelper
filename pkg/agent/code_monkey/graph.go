@@ -46,10 +46,12 @@ Describe your plans with rich details. Each Plan should be followed by only one 
 Task: `
 
 
-
+	
 	agentState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, agent_prompt),
 	}
+
+	/*
 	initialState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "Below a current conversation between user and helpful AI assistant. You (assistant) should help user in any task he/she ask you to do."),
 	}
@@ -75,6 +77,7 @@ Task: `
 			llms.TextParts(llms.ChatMessageTypeHuman, prompt),
 		)
 	}
+		*/
 
 	Tools, _ = tools.GetTools()
 
@@ -110,121 +113,4 @@ Task: `
 	return resultStr
 }
 
-// AGENT NODE
-/** We are telling agent, that it should response withTools, giving it function signatures defined earlier.
-  if agent get response from conditional edge like 'yes, use x function with this signatures and this json object as input parameters -- it will match with predefined pointer to semanticSearch function and it will make a toolCall
-  then it will append toolCall to message state.
-  Agent will recive current stake, make consideration whether or not to use tool and make a call for it
-  `shouldSearchDocuments` func will handle this tool call -- it will call semanticSearch function
-  Then result of the search tool will go back to agent as a toolResonse in the messages state
-*/
-func agent(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
 
-	agentState := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, "You are helpful agent that has access to a semanticSearch tool. Use this tool if user ask to retrive some information from database/collection to provide user with information he/she looking for."),
-	}
-
-	/*
-		for _,cn := range collection_name {
-			collectionState := []llms.MessageContent{
-				llms.TextParts(llms.ChatMessageTypeSystem, "Collection Name: " +cn),
-			}
-			state := append(agentState,collectionState...)
-			agentState = state
-		}
-	*/
-
-	model := Model // global... should be .env or getting from user context I guess.
-	tools := Tools
-
-	/*
-		consideration_query := []llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeSystem, "You are decision making agent, which can reply ONLY 'true' or 'false'.Your task is to determine whether or not to call semanticSearch function based on human input. If you see a basic question, return false. If user specified that he desires to use that function, return true. You should ONLY return 'true' or 'false'."),
-		}
-	*/
-
-	lastMsg := state[len(state)-1]
-	if lastMsg.Role == "tool" { // If we catch response from tool then it's second iteration and we simply need to give answer to user using this result
-		state = append(state, lastMsg)
-		response, err := model.GenerateContent(ctx, state)
-		if err != nil {
-			return state, err
-		}
-		msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
-		state = append(state, msg)
-		return state, nil
-
-	} else { // If it is not tool response
-
-		if lastMsg.Role == "human" { //                                            any user request
-
-			// this is consideration stack, it should be placed as separate node.
-			/*
-				consideration_stack := append(consideration_query, lastMsg)
-				//consideration_stack := append(consideration_query, state...)  // this is appending current state, but we actually need only last message here.
-				check, err := model.GenerateContent(ctx, consideration_stack) // one punch which determine wheter or not call tools. this is hardcode and probably should be separate part of the graph.
-				if err != nil {
-					return state, err
-				}
-				check_txt := fmt.Sprintf(check.Choices[0].Content)
-				log.Println("check result: ", check_txt)
-			*/
-			//	if check_txt == "true" { // tool call required by one-shot agent
-			state = append(state, agentState...)
-			state = append(state, lastMsg)
-			response, err := model.GenerateContent(ctx, state, llms.WithTools(tools)) // AI call tool function.. in this step it just put call in messages stack
-			if err != nil {
-				return state, err
-			}
-			msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
-
-			if len(response.Choices[0].ToolCalls) > 0 {
-				for _, toolCall := range response.Choices[0].ToolCalls {
-					if toolCall.FunctionCall.Name == "semanticSearch" { // AI catch that there is a function call in messages, so *now* it actually calls the function.
-						msg.Parts = append(msg.Parts, toolCall) // Add result to messages stack
-					}
-				}
-				state = append(state, msg)
-				return state, nil
-			}
-			/*
-				} else { // proceed without tools
-					response, err := model.GenerateContent(ctx, state)
-					if err != nil {
-						return state, err
-					}
-					msg := llms.TextParts(llms.ChatMessageTypeAI, response.Choices[0].Content)
-					state = append(state, msg)
-					return state, nil
-				}
-			*/
-		} // end if human
-		return state, nil
-	} // end if not tool response
-}
-
-// this function is only HANDLES tool calls, so this is a handler, not a deciding mechanism. agent decide whether or not to call tool in agent func and this func is handling tool call here.
-func shouldSearchDocuments(ctx context.Context, state []llms.MessageContent) string {
-	// this function (I suppose) can be reworked to work with a *set* of a functions, not just one func.
-	lastMsg := state[len(state)-1]
-	for _, part := range lastMsg.Parts {
-		toolCall, ok := part.(llms.ToolCall)
-
-		if ok && toolCall.FunctionCall.Name == "semanticSearch" {
-			log.Printf("agent should use SemanticSearch (embeddings similarity search aka DocumentsSearch)")
-			return "semanticSearch"
-		}
-	}
-	return graph.END // never reach this point, should be removed?
-}
-
-// This function is performing similarity search in our db vectorstore.
-func semanticSearch(ctx context.Context, state []llms.MessageContent) ([]llms.MessageContent, error) {
-	semanticSearchTool := tools.SemanticSearchTool{}
-	res, err := semanticSearchTool.Execute(ctx, state)
-	if err != nil {
-		// Handle the error
-		return nil, err
-	}
-	return res, nil
-}

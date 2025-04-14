@@ -1,10 +1,6 @@
 package code_monekey
 
-import (
-	"context"
-
-	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
-)
+import "context"
 
 type Plan struct {
     Task string
@@ -20,9 +16,10 @@ type ReWOO struct {
     Result string
 }
 
+
 // get_plan - функция для работы со State
-func get_plan(ctx context.Context, state graph.State) graph.State {
-    task := state.Get("task").(string)
+func get_plan(ctx context.Context, state ReWOO) ReWOO {
+    task := state.Task
     result := planner.invoke(map[string]string{"task": task})
     matches := re.findall(regex_pattern, result.content)
     return ReWOO{
