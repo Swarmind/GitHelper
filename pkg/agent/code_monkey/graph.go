@@ -1,4 +1,4 @@
-package code_monekey
+package code_monkey
 
 import (
 	"context"
@@ -88,11 +88,13 @@ Task: `
 	workflow := graph.NewStateGraph()
 
 	workflow.AddNode("plan", getPlan)
+	/*
 	workflow.AddNode("tool", tool_execution)
 	workflow.AddNode("solve", solve)
 	workflow.AddEdge("plan", "tool")
 	workflow.AddEdge("solve", END)
 	workflow.AddConditionalEdge("tool", _route)
+	*/
 	workflow.SetEntryPoint("plan")
 
 	app, err := workflow.Compile()

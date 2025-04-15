@@ -71,7 +71,7 @@ func CreateMessageContentAi(content string) []llms.MessageContent {
 	return intialState
 }
 
-func createMessageContentSystem(content string) []llms.MessageContent {
+func CreateMessageContentSystem(content string) []llms.MessageContent {
 	intialState := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, content),
 	}
