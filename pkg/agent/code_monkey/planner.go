@@ -2,30 +2,15 @@ package code_monkey
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	agent "github.com/JackBekket/GitHelper/pkg/agent/rag"
+	"github.com/tmc/langchaingo/llms"
 )
 
-type Plan struct {
-    Task string
-    Steps []string
-    PlanString string
-}
-
-
-/*
-type ReWOO struct {
-    Task string
-    PlanString string
-    Steps []string
-    Results map[string]string
-    Result string
-}
-*/
-
-var agent_prompt = `For the following task, make plans that can solve the problem step by step. For each plan, indicate \
-which external tool together with tool input to retrieve evidence. You can store the evidence into a \
+const AgentPrompt = `For the following task, make plans that can solve the problem step by step. For each plan, indicate
+which external tool together with tool input to retrieve evidence. You can store the evidence into a
 variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 
 Tools can be one of the following:
@@ -50,32 +35,47 @@ Describe your plans with rich details. Each Plan should be followed by only one 
 Task: `
 
 type ReWOO struct {
-    Task string `json:"task"`
-    PlanString string `json:"plan_string"`
-    Steps []string `json:"steps"`
-    Results map[string]interface{} `json:"results"`
-    Result string `json:"result"`
+	Task       string                 `json:"task"`
+	PlanString string                 `json:"plan_string"`
+	Steps      []string               `json:"steps"`
+	Results    map[string]interface{} `json:"results"`
+	Result     string                 `json:"result"`
 }
 
+var RegexPattern *regexp.Regexp = regexp.MustCompile(`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`)
 
-func get_plan(state ReWOO) (ReWOO, error) {
-    task := state.Task
-   
-    rp := regexp.MustCompile(`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`)
+func (lc LLMContext) GetPlan(ctx context.Context, state interface{}) (interface{}, error) {
+	task := (state.(ReWOO)).Task
 
-    request := agent_prompt + task
-    req :=agent.CreateMessageContentHuman(request)
-    //agent.CreateMessageContentSystem(a)
-    ctx := context.Background()
-    response, err := Model.GenerateContent(ctx, req)
-    if err != nil {
-        return state, err
-    }
-    result := response.Choices[0].Content
+	response, err := lc.LLM.GenerateContent(ctx,
+		agent.CreateMessageContentHuman(
+			fmt.Sprintf(
+				"%s\nList of tools:\n%s\n\n%s",
+				AgentPrompt,
+				getToolDesc(*lc.Tools),
+				task,
+			),
+		),
+	)
+	if err != nil {
+		return state, err
+	}
 
-    //result := promptTemplate.Invoke({"task": task})
+	fmt.Printf("result %+v", response.Choices[0])
 
-    // Find all matches in the sample text
-    matches := rp.FindStringSubmatch(result)
-    return ReWOO{Steps: matches, PlanString: result}, nil
+	result := response.Choices[0].Content
+	matches := RegexPattern.FindStringSubmatch(result)
+
+	return ReWOO{
+		Steps:      matches,
+		PlanString: result,
+	}, nil
+}
+
+func getToolDesc(tools []llms.Tool) string {
+	desc := ""
+	for idx, tool := range tools {
+		desc += fmt.Sprintf("(%d) %s[input]: %s\n", idx, tool.Function.Name, tool.Function.Description)
+	}
+	return desc
 }
