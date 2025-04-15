@@ -45,11 +45,15 @@ I need to find a web documentation about that library and initialization sequenc
 	}
 	state := stateInterface.(codeMonkey.ReWOO)
 
-	t.Logf("Returned state: %+v", state)
-
+	t.Log("Returned steps:")
+	for _, step := range state.Steps {
+		t.Logf("Step: %s", step)
+	}
 	if len(state.Steps) == 0 {
 		t.Fatal("empty steps")
 	}
+
+	t.Logf("Returned plan string:\n%s", state.PlanString)
 	if state.PlanString == "" {
 		t.Fatal("empty plan string")
 	}

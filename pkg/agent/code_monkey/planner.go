@@ -45,7 +45,8 @@ type ReWOO struct {
 var RegexPattern *regexp.Regexp = regexp.MustCompile(`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`)
 
 func (lc LLMContext) GetPlan(ctx context.Context, state interface{}) (interface{}, error) {
-	task := (state.(ReWOO)).Task
+	rwState := state.(ReWOO)
+	task := rwState.Task
 
 	response, err := lc.LLM.GenerateContent(ctx,
 		agent.CreateMessageContentHuman(
@@ -61,15 +62,13 @@ func (lc LLMContext) GetPlan(ctx context.Context, state interface{}) (interface{
 		return state, err
 	}
 
-	fmt.Printf("result %+v", response.Choices[0])
-
 	result := response.Choices[0].Content
 	matches := RegexPattern.FindStringSubmatch(result)
 
-	return ReWOO{
-		Steps:      matches,
-		PlanString: result,
-	}, nil
+	rwState.Steps = matches
+	rwState.PlanString = result
+
+	return rwState, nil
 }
 
 func getToolDesc(tools []llms.Tool) string {
