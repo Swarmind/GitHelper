@@ -63,7 +63,7 @@ func (lc LLMContext) GetPlan(ctx context.Context, state interface{}) (interface{
 	}
 
 	result := response.Choices[0].Content
-	matches := RegexPattern.FindStringSubmatch(result)
+	matches := RegexPattern.FindAllString(result, -1)
 
 	rwState.Steps = matches
 	rwState.PlanString = result
