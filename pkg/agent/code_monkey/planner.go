@@ -78,3 +78,15 @@ func getToolDesc(tools []llms.Tool) string {
 	}
 	return desc
 }
+
+
+func _getCurrentTask(state ReWOO) int {
+    if state.Results == nil {
+        return 1
+    }
+    if len(state.Results) == len(state.Steps) {
+        return 0
+    } else {
+        return int(len(state.Results) + 1)
+    }
+}
