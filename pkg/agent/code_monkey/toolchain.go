@@ -31,6 +31,7 @@ func InitializeChain() (*graph.Runnable,error){
 		workflow.AddNode("generate_call", generateCall)
 		workflow.AddNode("semanticSearch",semanticSearch)
 
+		workflow.SetEntryPoint("generate_call")
 		workflow.AddEdge("generate_call","semanticSearch")
 		workflow.AddEdge("semanticSearch","END")
 	
