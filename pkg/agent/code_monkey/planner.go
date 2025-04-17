@@ -37,16 +37,26 @@ Task: `
 type ReWOO struct {
 	Task       string                 `json:"task"`
 	PlanString string                 `json:"plan_string"`
-	Steps      []string               `json:"steps"`
+	Steps      []ReWOOStep               `json:"steps"`
 	Results    map[string]interface{} `json:"results"`
 	Result     string                 `json:"result"`
+	// TODO: add tools to state
+}
+
+type ReWOOStep struct {
+	Plan      string
+	StepName  string
+	Tool      string
+	ToolInput string
+	Call	  string
+	Result	  string
 }
 
 var RegexPattern *regexp.Regexp = regexp.MustCompile(`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`)
 
-func (lc LLMContext) GetPlan(ctx context.Context, state interface{}) (interface{}, error) {
-	rwState := state.(ReWOO)
-	task := rwState.Task
+func (lc LLMContext) GetPlan(ctx context.Context, state ReWOO) (interface{}, error) {
+	//rwState := state.(ReWOO)
+	task := state.Task
 
 	response, err := lc.LLM.GenerateContent(ctx,
 		agent.CreateMessageContentHuman(
@@ -63,12 +73,26 @@ func (lc LLMContext) GetPlan(ctx context.Context, state interface{}) (interface{
 	}
 
 	result := response.Choices[0].Content
-	matches := RegexPattern.FindAllString(result, -1)
+	//matches := RegexPattern.FindAllString(result, -1)
 
-	rwState.Steps = matches
-	rwState.PlanString = result
+	matches := RegexPattern.FindAllStringSubmatch(result, -1)
 
-	return rwState, nil
+	for _, m := range matches {
+		state.Steps = append(state.Steps,
+			ReWOOStep{
+				// m[0] - full match,
+				Plan:      m[1],
+				StepName:  m[2],
+				Tool:      m[3],
+				ToolInput: m[4],
+			},
+		)
+
+	}
+
+	state.PlanString = result
+
+	return state, nil
 }
 
 func getToolDesc(tools []llms.Tool) string {
