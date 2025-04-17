@@ -35,11 +35,11 @@ Describe your plans with rich details. Each Plan should be followed by only one 
 Task: `
 
 type ReWOO struct {
-	Task       string                 `json:"task"`
-	PlanString string                 `json:"plan_string"`
-	Steps      []ReWOOStep               `json:"steps"`
-	Results    map[string]interface{} `json:"results"`
-	Result     string                 `json:"result"`
+	Task       string                
+	PlanString string                 
+	Steps      []ReWOOStep               
+	Results    map[string]string 
+	Result     string                 
 	// TODO: add tools to state
 }
 
@@ -51,6 +51,14 @@ type ReWOOStep struct {
 	Call	  string
 	Result	  string
 }
+
+const (
+	GraphPlanName  = "plan"
+	GraphToolName  = "tool"
+	GraphSolveName = "solve"
+)
+
+const LLMToolName = "LLM"
 
 var RegexPattern *regexp.Regexp = regexp.MustCompile(`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`)
 
@@ -104,13 +112,9 @@ func getToolDesc(tools []llms.Tool) string {
 }
 
 
-func _getCurrentTask(state ReWOO) int {
-    if state.Results == nil {
-        return 1
-    }
-    if len(state.Results) == len(state.Steps) {
-        return 0
-    } else {
-        return int(len(state.Results) + 1)
-    }
+func getCurrentTask(state ReWOO) int {
+	if len(state.Results) == len(state.Steps) {
+		return -1
+	}
+	return len(state.Results)
 }
