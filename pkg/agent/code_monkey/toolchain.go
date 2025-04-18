@@ -32,7 +32,8 @@ func InitializeChain() (*graph.Runnable,error){
 		workflow.AddNode("semanticSearch",semanticSearch)
 
 		workflow.SetEntryPoint("generate_call")
-		workflow.AddEdge("generate_call","semanticSearch")
+		//workflow.AddEdge("generate_call","semanticSearch")
+		workflow.AddConditionalEdge("generate_call",whichTool)
 		workflow.AddEdge("semanticSearch","END")
 	
 		app, err := workflow.Compile()
@@ -109,6 +110,25 @@ func generateCall(ctx context.Context, s interface{}) (interface{},error){
 		}
 	}
 	state.Call = response.Choices[0].Content
+	state.CallMessage = result
 	return state,nil
+}
+
+
+
+func whichTool(ctx context.Context, s interface{}) string {
+	state := s.(ReWOOStep)
+	call := state.CallMessage
+	var tool_node string
+	for _, part := range call.Parts {
+		toolCall, ok := part.(llms.ToolCall)
+
+		if ok && toolCall.FunctionCall.Name == "semanticSearch" {
+			log.Printf("agent should use SemanticSearch (embeddings similarity search aka DocumentsSearch)")
+			tool_node = "semanticSearch"
+		}
+		// if toolCall.FunctionCall.Name == ??? then ???
+	}
+	return tool_node
 }
 

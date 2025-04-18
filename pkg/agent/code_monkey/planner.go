@@ -48,7 +48,9 @@ type ReWOOStep struct {
 	StepName  string
 	Tool      string
 	ToolInput string
-	Call	  string
+	//Call	  string
+	CallMessage	  llms.MessageContent
+	Call 	  string
 	Result	  string
 }
 

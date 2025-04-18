@@ -6,14 +6,13 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
-	"github.com/JackBekket/GitHelper/pkg/agent/rag/tools"
 	graph "github.com/JackBekket/langgraphgo/graph/stategraph"
 )
 
 type LLMContext struct {
 	LLM           *openai.LLM
 	Tools         *[]llms.Tool
-	ToolsExecutor *tools.ToolsExectutor			// ??????
+	//ToolsExecutor ToolsExectutor			// ??????
 }
 
 func (lc LLMContext) OneShotRun(ctx context.Context, prompt string) (string, error) {
