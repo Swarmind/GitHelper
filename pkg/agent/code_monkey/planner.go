@@ -9,12 +9,12 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-const AgentPrompt = `For the following task, make plans that can solve the problem step by step. For each plan, indicate
+const PromptGetPlan = `For the following task, make plans that can solve the problem step by step. For each plan, indicate
 which external tool together with tool input to retrieve evidence. You can store the evidence into a
 variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 
 Tools can be one of the following:
-(1) Google[input]: Worker that searches results from Google. Useful when you need to find short
+(1) search[json: {"query": "string"}]: Worker that searches results from Duckduckgo. Useful when you need to find short
 and succinct answers about a specific topic. The input should be a search query.
 (2) LLM[input]: A pretrained LLM like yourself. Useful when you need to act with general
 world knowledge and common sense. Prioritize it when you are confident in solving the problem
@@ -72,7 +72,7 @@ func (lc LLMContext) GetPlan(ctx context.Context, s interface{}) (interface{}, e
 		agent.CreateMessageContentHuman(
 			fmt.Sprintf(
 				"%s\nList of tools:\n%s\n\n%s",
-				AgentPrompt,
+				PromptGetPlan,
 				getToolDesc(*lc.Tools),
 				task,
 			),
