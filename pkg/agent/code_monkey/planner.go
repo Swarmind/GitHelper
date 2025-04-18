@@ -62,8 +62,8 @@ const LLMToolName = "LLM"
 
 var RegexPattern *regexp.Regexp = regexp.MustCompile(`Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]`)
 
-func (lc LLMContext) GetPlan(ctx context.Context, state ReWOO) (interface{}, error) {
-	//rwState := state.(ReWOO)
+func (lc LLMContext) GetPlan(ctx context.Context, s interface{}) (interface{}, error) {
+	state := s.(ReWOO)
 	task := state.Task
 
 	response, err := lc.LLM.GenerateContent(ctx,

@@ -13,7 +13,7 @@ import (
 type LLMContext struct {
 	LLM           *openai.LLM
 	Tools         *[]llms.Tool
-	ToolsExecutor *tools.ToolsExectutor
+	ToolsExecutor *tools.ToolsExectutor			// ??????
 }
 
 func (lc LLMContext) OneShotRun(ctx context.Context, prompt string) (string, error) {
