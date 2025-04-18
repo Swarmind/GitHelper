@@ -23,10 +23,12 @@ func (lc LLMContext) OneShotRun(ctx context.Context, prompt string) (string, err
 	workflowGraph.AddNode("plan", lc.GetPlan)
 	workflowGraph.AddNode("tool", lc.ToolExecution)
 	workflowGraph.AddNode("solve", lc.Solve)
-	workflowGraph.AddEdge("plan", "tool")
-	workflowGraph.AddEdge("solve", graph.END)
-	workflowGraph.AddConditionalEdge("tool", Route)
 	workflowGraph.SetEntryPoint("plan")
+	workflowGraph.AddEdge("plan", "tool")
+	workflowGraph.AddConditionalEdge("tool", Route)
+	workflowGraph.AddEdge("solve", graph.END)
+	
+	
 
 	app, err := workflowGraph.Compile()
 	if err != nil {
