@@ -105,6 +105,14 @@ func (lc LLMContext) GetPlan(ctx context.Context, state ReWOO) (interface{}, err
 
 func getToolDesc(tools []llms.Tool) string {
 	desc := ""
+	tools = append(tools, llms.Tool{
+		Function: &llms.FunctionDefinition{
+			Name: "LLM",
+			Description: `A pretrained LLM like yourself. Useful when you need to act with general
+world knowledge and common sense. Prioritize it when you are confident in solving the problem
+yourself. Input can be any instruction.`,
+		},
+	})
 	for idx, tool := range tools {
 		desc += fmt.Sprintf("(%d) %s[input]: %s\n", idx, tool.Function.Name, tool.Function.Description)
 	}
