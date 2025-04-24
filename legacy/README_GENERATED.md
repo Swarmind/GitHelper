@@ -1,29 +1,50 @@
-## RAG
+# rag_test
 
-This package provides a set of functions for performing Retrieval Augmented Generation (RAG) using various question answering chains. It leverages embeddings to retrieve relevant documents from a vector store and then uses these documents to generate answers to questions.
+Package: rag_test
 
-### File structure
+Imports:
+- "fmt"
+- "log"
+- "os"
+- "testing"
+- "github.com/JackBekket/GitHelper/legacy"
+- "github.com/JackBekket/hellper/lib/embeddings"
+- "github.com/joho/godotenv"
+- "github.com/tmc/langchaingo/vectorstores"
+
+External data and input sources:
+- The code reads environment variables from a .env file using the godotenv package.
+- It uses the following environment variables:
+    - AI_ENDPOINT: The URL of the AI endpoint.
+    - API_TOKEN: The API token for the AI endpoint.
+    - DB_URL: The URL of the database.
+
+Code summary:
+- The package contains a set of test functions for the RAG (Retrieval-Augmented Generation) component.
+- The tests cover various scenarios, including filtering documents, using different types of documents, and using the "stuffed" method of RAG.
+- The tests use the RAG component to generate responses to prompts based on the provided documents.
+- The package also includes a helper function to retrieve a vector store from the database.
+
+- Test_RagWithFilteres: This test function demonstrates the use of RAG with optional filters. It retrieves a vector store from the database and uses it to generate a response to a prompt, filtering the documents based on the specified criteria.
+- Test_RagReflexia: This test function tests the RAG component with two types of documents (docs and code) and calls the "stuffed" method of RAG. It retrieves a vector store from the database and uses it to generate a response to a prompt, combining information from both types of documents.
+- Test_StuffRag: This test function tests the "stuffed" method of RAG. It retrieves a vector store from the database and uses it to generate a response to a prompt, combining information from multiple sources.
+- Test_RefinedQA_RAG: This test function tests the Refined QA method of RAG. It retrieves a vector store from the database and uses it to generate a response to a prompt, refining the answer based on the context.
+- getCollection: This helper function retrieves a vector store from the database based on the provided AI endpoint, API token, database URL, and namespace.
+
+In summary, the rag_test package provides a set of test functions for the RAG component, covering various scenarios and demonstrating its capabilities. The tests use the RAG component to generate responses to prompts based on the provided documents, filtering, combining, and refining the information as needed.
+
+Project package structure:
 - rag.go
 - rag_test.go
+- legacy/rag_test.go
 
-### Code summary
-The package defines several functions for performing RAG:
+Relations between code entities:
+- The rag_test package depends on the legacy package, which contains the RAG component.
+- The getCollection function in the rag_test package is used by the test functions to retrieve a vector store from the database.
 
-- `RagReflexia`: This function takes a question, API URL, API token, number of results, and a vector store as input. It creates an embeddings client, retrieves documentation and code metadata based on the question, combines the metadata into a single input for the LLM, and uses the stuffed QA chain to generate an answer to the question.
+Unclear places:
+- It is unclear how the test functions are executed and what the expected results are.
+- It is unclear how the environment variables are set and used in the tests.
 
-- `RagWithOptions`: This function is similar to `RagReflexia`, but it also takes additional options for the vector store.
-
-- `StuffedQA_Rag`: This function takes a question, API URL, API token, number of results, and a vector store as input. It creates an embeddings client, retrieves relevant documents from the vector store, and uses the stuffed QA chain to generate an answer to the question.
-
-- `RefinedQA_RAG`: This function takes a question, API URL, API token, number of results, and a vector store as input. It creates an embeddings client, retrieves relevant documents from the vector store, and uses the refine documents chain for question answering to generate an answer to the question.
-
-All these functions use the provided API URL and API token to create an embeddings client, which is then used to retrieve relevant documents from the vector store. The retrieved documents are then used to generate an answer to the question using the specified question answering chain.
-
-### Edge cases
-The application can be launched by importing the package and calling any of the functions mentioned above.
-
-### Unclear places
-The package does not explicitly mention how the embeddings client is created or how the vector store is initialized. It assumes that these components are already set up and configured.
-
-### Dead code
-There is no apparent dead code in the package.
+Dead code:
+- None found.

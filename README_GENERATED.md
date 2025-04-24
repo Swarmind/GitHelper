@@ -1,15 +1,91 @@
-GitHelper is a tool that integrates with GitHub to provide AI-powered assistance for developers. It leverages a Reflexia integration to analyze code and generate responses, and it uses a database to store and manage the history of interactions.
+## Package: main
 
-The main function of the GitHelper package is to handle webhook events from GitHub and respond accordingly. It sets up a server that listens for incoming requests and processes them based on the event type.
+This package handles webhook events from GitHub and interacts with a database to store and retrieve information related to GitHub repositories.
 
-When a new issue is opened, the GitHelper package retrieves the issue details, such as the repository name, issue ID, and issue title. It then uses the Reflexia integration to generate a response based on the issue content. The response is then posted as a comment on the issue.
+### Imports:
 
-For issue comments, the GitHelper package checks if the comment is from the bot itself and skips processing if it is. Otherwise, it retrieves the comment details and uses the Reflexia integration to generate a response. The response is then posted as a comment on the issue.
+- context
+- encoding/json
+- fmt
+- io
+- net/http
+- os
+- slices
+- strconv
+- strings
+- github.com/JackBekket/GitHelper/internal/database
+- github.com/JackBekket/GitHelper/internal/reflexia_integration
+- github.com/JackBekket/GitHelper/pkg/agent/rag
+- github.com/JackBekket/GitHelper/pkg/github
+- github.com/JackBekket/hellper/lib/embeddings
+- github.com/rs/zerolog/log
+- github.com/google/go-github/v65/github
+- github.com/joho/godotenv
+- github.com/tmc/langchaingo/vectorstores
 
-When a push event is received, the GitHelper package checks if the repository owner is whitelisted. If it is, it retrieves the repository URL and uses the Reflexia integration to run the package runner. This will analyze the code and update the database with the latest information.
+### External Data and Input Sources:
 
-The GitHelper package also includes functions for handling webhook events related to installation repositories and issues. These functions are responsible for updating the database with information about the repositories and issues, as well as generating responses to the events.
+- Environment variables: AIBaseURL, AIToken, DBURL, APP_ID, PRIVATE_KEY_NAME, MODEL
+- GitHub webhook events: installation_repositories, issues, issue_comment, push
 
-In addition to the main function, the GitHelper package includes several helper functions for tasks such as creating and updating database entries, retrieving information from GitHub, and interacting with the Reflexia integration.
+### TODOs:
 
-Overall, the GitHelper package provides a comprehensive solution for integrating AI-powered assistance into GitHub workflows. It handles webhook events, interacts with the Reflexia integration, and manages a database to store and retrieve information about repositories and issues.
+- Delete the obsolete generateResponse function when the previous genResponse function is tested.
+
+### Code Summary:
+
+1. **Initialization:**
+   - Loads environment variables and sets up database connection.
+   - Creates a GitHub API service instance.
+
+2. **Webhook Handler:**
+   - Handles incoming webhook events from GitHub.
+   - Processes events based on their type:
+     - Installation: Logs the installation of the app in a repository.
+     - Issue opened: Creates a response to the issue using the RAG agent.
+     - Issue closed: Drops the history of the issue from the database.
+     - Issue comment: Generates a response to the comment using the RAG agent.
+     - Push: Checks if the push is to the master or main branch and runs the Reflexia package runner if it is.
+
+3. **Response Generation:**
+   - Creates a response to a GitHub issue using the RAG agent.
+   - Updates the history of the issue in the database.
+
+4. **Continuation of Thread:**
+   - Generates a response to a comment on a GitHub issue, continuing the existing conversation.
+   - Updates the history of the issue in the database.
+
+5. **Collection Retrieval:**
+   - Retrieves a collection of documents from the database for a given namespace.
+
+### Summary:
+
+This package is responsible for handling GitHub webhook events and interacting with a database to store and retrieve information related to GitHub repositories. It uses the RAG agent to generate responses to issues and comments, and it updates the history of the conversation in the database.
+
+main_test.go
+Package: main
+
+Imports:
+- "os"
+- "strconv"
+- "strings"
+- "testing"
+- "github.com/JackBekket/GitHelper/pkg/agent/rag"
+- "github.com/JackBekket/GitHelper/pkg/github"
+- "github.com/JackBekket/GitHelper/pkg/github"
+- "github.com/joho/godotenv"
+- "github.com/rs/zerolog/log"
+
+External data, input sources:
+- .env file for environment variables
+
+TODOs:
+- None
+
+Summary:
+- The code defines two test functions, TestAgent and TestGithubAPI, which test the functionality of the agent and GitHub API components, respectively.
+- TestAgent tests the agent's ability to retrieve and process prompts from a vectorstore, using environment variables to configure the agent's settings.
+- TestGithubAPI tests the GitHub API's ability to create, comment on, and close issues, using environment variables to configure the API's settings.
+- Both test functions use the godotenv package to load environment variables from a .env file.
+- The code also imports and uses the agent, GitHub, and godotenv packages to perform the tests.
+
