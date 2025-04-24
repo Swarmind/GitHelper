@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	//"github.com/tmc/langgraphgo/graph"
-	"github.com/JackBekket/GitHelper/pkg/rag/agent"
+	agent "github.com/JackBekket/GitHelper/pkg/agent/rag"
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"

@@ -13,8 +13,8 @@ import (
 
 	"github.com/JackBekket/GitHelper/internal/database"
 	reflexia "github.com/JackBekket/GitHelper/internal/reflexia_integration"
+	agent "github.com/JackBekket/GitHelper/pkg/agent/rag"
 	githubAPI "github.com/JackBekket/GitHelper/pkg/github"
-	"github.com/JackBekket/GitHelper/pkg/rag/agent"
 	embd "github.com/JackBekket/hellper/lib/embeddings"
 
 	"github.com/rs/zerolog/log"
